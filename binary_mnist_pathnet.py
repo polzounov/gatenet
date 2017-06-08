@@ -10,6 +10,7 @@ import numpy as np
 import time
 import tensorflow as tf
 
+
 def train():
   # Import data
   tr_data1, tr_label1 = data_manager.get_next_batch()
@@ -26,17 +27,40 @@ def train():
     tf.summary.image('input', image_shaped_input, 2)
 
 
+
+  graph_structure = []
+  weights_dict = {}
+
+  # FILL IN
+  tensor_sizes = {}
+  graph_io_sizes = {}
+  num_sublayers = 3
+
       # Hidden Layers
-  weights_list = np.zeros((Parameters.L, Parameters.M), dtype=object);
-  biases_list = np.zeros((Parameters.L, Parameters.M), dtype=object);
   for i in range(Parameters.L):
     for j in range(Parameters.M):
-      if (i == 0):
-        weights_list[i, j] = pathnet.module_weight_variable([784, Parameters.filt]);
-        biases_list[i, j] = pathnet.module_bias_variable([Parameters.filt]);
-      else:
-        weights_list[i, j] = pathnet.module_weight_variable([Parameters.filt, Parameters.filt]);
-        biases_list[i, j] = pathnet.module_bias_variable([Parameters.filt]);
+          weights_dict['weights_' + str(i) + '_' + str(j)] = pathnet.weight_variable(tensor_sizes['weights_' + str(i) + '_' + str(j)])
+          weights_dict['biases_' + str(i) + '_' + str(j)] = pathnet.bias_variable(tensor_sizes['biases_' + str(i) + '_' + str(j)])
+          weights_dict['gate_weights_' + str(i) + '_' + str(j)] = pathnet.weight_variable(tensor_sizes['gate_weights_' + str(i) + '_' + str(j)])
+          weights_dict['gate_biases_' + str(i) + '_' + str(j)] = pathnet.weight_variable(tensor_sizes['gate_biases_' + str(i) + '_' + str(j)])
+
+    for s1 in range(num_sublayers):
+        for s2 in range(num_sublayers):
+            weights_dict['shape_shift_weights_' + str(i) + '_' + str(s1) + '_' + str(s2)]\
+                = pathnet.weight_variable(tensor_sizes['shape_shift_weights_' + str(i) + '_' + str(s1) + '_' + str(s2)])
+            weights_dict['shape_shift_biases_' + str(i) + '_' + str(s1) + '_' + str(s2)] \
+                = pathnet.bias_variable(
+                tensor_sizes['shape_shift_biases_' + str(i) + '_' + str(s1) + '_' + str(s2)])
+
+
+  graph_structure.append((graph_io_sizes[(0,0)], pathnet.identity_module))
+  for i in range(Parameters.L): # Change indexing
+    for j in range(Parameters.M):
+        graph_structure.append((graph_io_sizes[(i,j)], pathnet.identity_module))
+
+  graph_structure.append((graph_io_sizes[(Parameters.L, 0)], pathnet.identity_module))
+
+
 
   for i in range(Parameters.L):
     layer_modules_list = np.zeros(Parameters.M, dtype=object);
@@ -105,6 +129,7 @@ def train():
       print('Optimal Path is as followed.');
       break;
       '''
+
 
 def main(_):
   Parameters.log_dir+=str(int(time.time()));

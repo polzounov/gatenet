@@ -33,15 +33,6 @@ def bias_variable(shape): # KEEP
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial)
 
-def module_weight_variable(shape): # KEEP
-  """Create a weight variable with appropriate initialization."""
-  initial = tf.truncated_normal(shape, stddev=0.1)
-  return [tf.Variable(initial)]
-
-def module_bias_variable(shape): # KEEP
-  """Create a bias variable with appropriate initialization."""
-  initial = tf.constant(0.1, shape=shape)
-  return [tf.Variable(initial)]
   
 def variable_summaries(var): # KEEP
   """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
@@ -69,6 +60,7 @@ def gating_layer(layer_input,
                  gate_biases,
                  gate_name=None,
                  gamma=1):
+
   '''Calculates the gating of the next layer based on the input image and previous layer
   ARGS: layer_input: The output all of the modules in the previous layer 
                    - [M_prev, N, H_L, W_L, C_L] (where L is the layer where input tensor
@@ -107,7 +99,7 @@ def gating_layer(layer_input,
 identity_module   = lambda input_tensor, weights, biases, act: input_tensor
 perceptron_module = lambda input_tensor, weights, biases, act: act(tf.matmul(input_tensor, weights) + biases)
 residual_perceptron_module = lambda input_tensor, weights, biases, act: act(tf.matmul(input_tensor, weights) + biases) + input_tensor
-#conv_module       = lambda input_tensor, weights, biases, act: act(tf.matmul(input_tensor, weights) + biases) + input_tensor
+conv_module = lambda input_tensor, weights, biases, act:  act(tf.nn.conv2d(input_tensor, weights, strides=[1,1,1,1], padding="SAME"))
 
 #####################################################################################
 ###############                  MODULES                    #########################
