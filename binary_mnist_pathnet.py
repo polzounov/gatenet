@@ -130,6 +130,7 @@ def train():
       break;
       '''
 
+
 def main(_):
   Parameters.log_dir+=str(int(time.time()));
   if tf.gfile.Exists(Parameters.log_dir):

@@ -60,6 +60,7 @@ def gating_layer(layer_input,
                  gate_biases,
                  gate_name=None,
                  gamma=1):
+
   '''Calculates the gating of the next layer based on the input image and previous layer
   ARGS: layer_input: The output all of the modules in the previous layer 
                    - [M_prev, N, H_L, W_L, C_L] (where L is the layer where input tensor
