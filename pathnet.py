@@ -115,7 +115,7 @@ residual_perceptron_module = lambda input_tensor, weights, biases, act: act(tf.m
 def module(input_tensor,
            weights,
            biases,
-           layer_name=None,
+           module_name=None,
            act=tf.nn.relu,
            func=perceptron_module):
   ''' ***This is for modules in the first layer of the net
@@ -127,14 +127,14 @@ def module(input_tensor,
                         shape [N,H,W,C]
         weights       : The weights for the module (only the current module's weights)
         biases        : The biases for the module
-        layer_name (optional) : Name for scoping
+        module_name (optional) : Name for scoping
         act(optional) : Activation function
   
   Returns: The modules output (calculation of the function)
   '''
 
   # Adding a name scope ensures logical grouping of the layers in the graph.
-  with tf.name_scope(layer_name):
+  with tf.name_scope(module_name):
     # This Variable will hold the state of the weights for the layer
     with tf.name_scope('weights'):
       variable_summaries(weights)
@@ -150,7 +150,7 @@ def module(input_tensor,
 def input_to_module(input_tensor,
                     weights_dict,
                     layer_number,
-                    prev_layer_shapes,
+                    prev_layer_structure,
                     output_shape):
   '''Resizes (w convs) and sums up the previous layer's modules from the input_tensor
      and returns the sum that will feed into the next layer's modules
@@ -160,7 +160,7 @@ def input_to_module(input_tensor,
         weights_dict     : The weights and biases (used for the reshaping convolutions) 
         layer_number     : The current layer number
                              - the number of weights/biases = (n - 1) * n, n = number of sublayers
-        prev_layer_shapes: A list of shapes from the previous layer
+        prev_layer_structure: A list of shapes from the previous layer
         output_shape     : The wanted shape for the output
 
   Returns: output_tensor: Reshape (with conv) to the desired output_shape and then 
@@ -168,7 +168,7 @@ def input_to_module(input_tensor,
                           Where _n corresponds the desired output shape
   '''
   tensor_to_sum = []
-  for i, shape in enumerate(prev_layer_shapes):
+  for i, shape in enumerate(prev_layer_structure):
     if shape == output_shape:
       tensor_to_sum.append(input_tensor[i]) # The way of getting the tensor will depend on if its a list or a R+1 rank tensor
       # tensor_to_sum.append(input_tensor[i,:,:,:])
@@ -218,10 +218,9 @@ def reshape_connection(input_tensor,
 def layer(input_tensor,
           input_image,
           weights_dict,
-          M,
           layer_number,
-          prev_layer_shapes=None,
-          current_layer_shapes=None):
+          prev_layer_structure=None,
+          current_layer_structure=None):
   '''Returns the output of a layer of modules
 
   ARGS: input_tensor: The input to the layer, should be list of tensors each of shape
@@ -229,12 +228,11 @@ def layer(input_tensor,
         input_image : The original input image to the network, shape [N,H,W,C] of image
         weights_dict: A dictionary with the weights and biases for the whole network,
                       we only use a subset of these (the ones for the current layer)
-        M: The number of modules should be in the current layer
         layer_number: the current layer number
 
         NOT FULLY IMPLEMENTED: *SUB-LAYERS*
-          prev_layer_shapes   : The shapes of all the modules of the previous layer
-          current_layer_shapes: The shapes of all the modules in the current layer
+          prev_layer_structure   : The shapes of all the modules of the previous layer
+          current_layer_structure: The shapes of all the modules in the current layer
 
 
   Returns: output_tensor: The outputs of all of the tensors in the previous layer
@@ -246,29 +244,30 @@ def layer(input_tensor,
   gate_weights = [weights_dict['gate_weights_' + str(layer_number) + '_' + module] for module in range(M)]
   gate_biases  = [weights_dict['gate_biases_'  + str(layer_number) + '_' + module] for module in range(M)]
 
+  M = len(current_layer_structure)
   # Get the structure of the current layer
-  layer_stucture = get_layer_structure(M, layer_number, current_layer_shapes=current_layer_shapes)
+  layer_stucture = get_layer_structure(M, layer_number, current_layer_structure=current_layer_structure)
   # Get the gating values for the layer
   gates = gating_layer(input_tensor, image_input, gate_weights, gate_biases, gate_name='gate_'+str(layer_number), gamma=1)
 
   tensor_output = []
   for i, module_func in enumerate(layer_stucture):
     # Get the input of the module into the right shape (reshape to proper shape and average over previous module outputs)
-    input_to_module = input_to_module_shape(input_tensor, weights_dict, layer_number, prev_layer_shapes, output_shape)
+    input_to_module = input_to_module_shape(input_tensor, weights_dict, layer_number, prev_layer_structure, output_shape)
     # Multiply gate and module values
     module = gates[i] * module(input_to_module, 
                                weights_list[i], 
                                biases_list[i], 
-                               layer_name='module_'+str(layer_number)+'_'+str(i),
+                               module_name='module_'+str(layer_number)+'_'+str(i),
                                act=tf.nn.relu, 
                                func=module_func)
     tensor_output.append(module)
-  return tensor_output
+  return (tensor_output, gates)
 
 def get_layer_structure(M,
                        layer_number,
                        options=None,
-                       current_layer_shapes=None):
+                       current_layer_structure=None):
   '''Returns a list describing which modules get placed where for a layer
      Currently this structure is hardcoded, can fix this easily
 
@@ -303,68 +302,26 @@ def build_pathnet_graph(L, M, X, weights_dict, graph_structure):
                          shapes, etc.) (First el is the input shape)
 
   Returns: logits: The predictions of the network, same shape as y (batch size N by classes)
+           gates : The gate activations for each layer: gate[l] = 1xM tensor with gates for the layer
   '''
   # Build graph up to the last hidden layer
   next_tensor_input = X
-  for layer in range(L-2):
-    next_tensor_input = layer(next_tensor_input, X, weights_dict, M, layer, 
-                              prev_layer_shapes=graph_structure[layer],
-                              current_layer_shapes=graph_structure[layer+1])
-  # Get the predictions
+
+  # Save the gate outputs
+  gates = []
+  for layer in range(1,L-1):
+    next_tensor_input, layer_gates = layer(next_tensor_input, X, weights_dict, M, layer, 
+                                           prev_layer_structure=graph_structure[layer-1],
+                                           current_layer_structure=graph_structure[layer])
+    gates.append(layer_gates)
+
+  # FINISH THIS PART
   output_shape = graph_structure[L-1][0]
-  input_to_module(next_tensor_input, weights_dict, L, graph_structure[L-2], output_shape)
+  last_input = input_to_module(next_tensor_input, weights_dict, L, graph_structure[L-2], output_shape)
+  output_weights = weights_dict['weights_' + str(L-1) + '_' + module]
+  output_biases  = weights_dict['biases_'  + str(L-1) + '_' + module]
+  logits = module(input_tensor, output_weights, output_biases, layer_name='output_layer', act=tf.nn.relu, func=perceptron_module)
 
-#####################################################################################
+  return (logits, gates)
 
-
-
-  '''
-  # Input placeholders
-  with tf.name_scope('input'):
-    x = tf.placeholder(tf.float32, [None, 784], name='x-input')
-    y_ = tf.placeholder(tf.float32, [None, 2], name='y-input')
-
-  with tf.name_scope('input_reshape'):
-    image_shaped_input = tf.reshape(x, [-1, 28, 28, 1])
-    tf.summary.image('input', image_shaped_input, 2)
-
-  # geopath_examples
-  geopath = pathnet.geopath_initializer(FLAGS.L, FLAGS.M)
-  
-  # fixed weights list
-  fixed_list = np.ones((FLAGS.L, FLAGS.M), dtype=str)
-  for i in range(FLAGS.L):
-    for j in range(FLAGS.M):
-      fixed_list[i, j] = '0'
-
-  # Hidden Layers
-  weights_list = np.zeros((FLAGS.L, FLAGS.M), dtype=object)
-  biases_list = np.zeros((FLAGS.L, FLAGS.M), dtype=object)
-  for i in range(FLAGS.L):
-    for j in range(FLAGS.M):
-      if(i == 0):
-        weights_list[i, j] = pathnet.module_weight_variable([784, FLAGS.filt])
-        biases_list[i, j] = pathnet.module_bias_variable([FLAGS.filt])
-      else:
-        weights_list[i, j] = pathnet.module_weight_variable([FLAGS.filt, FLAGS.filt])
-        biases_list[i, j] = pathnet.module_bias_variable([FLAGS.filt])
-  
-  for i in range(FLAGS.L):
-    # Create layer from module
-    ##########################################
-    # 
-    ####
-    layer_modules_list = np.zeros(FLAGS.M, dtype=object)
-    for j in range(FLAGS.M):
-      if(i == 0):
-        layer_modules_list[j] = pathnet.module(x, weights_list[i, j], biases_list[i, j], 'layer'+str(i+1)+"_"+str(j+1))  *  geopath[i, j]
-      else:
-        layer_modules_list[j] = pathnet.module2(j, net, weights_list[i, j], biases_list[i, j], 'layer'+str(i+1)+"_"+str(j+1))  *  geopath[i, j]
-    ##################################################################
-    net = np.sum(layer_modules_list)/FLAGS.M
-  #net = net/FLAGS.M
-  # Output Layer
-  output_weights = pathnet.module_weight_variable([FLAGS.filt, 2])
-  output_biases = pathnet.module_bias_variable([2])
-  '''
 
