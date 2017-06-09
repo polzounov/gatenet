@@ -126,6 +126,8 @@ def init_params(graph_structure, classes=2):
   weights_dict['weights_'+ str(L-1) + '_' + module] = output_weights
   weights_dict['biases_' + str(L-1) + '_' + module] = output_biases
 
+  return weights_dict
+
 #####################################################################################
 ###############             GATING LAYER                    #########################
 #####################################################################################
