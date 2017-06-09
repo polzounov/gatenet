@@ -58,22 +58,18 @@ class ModuleFunctionsTest():
     with tf.Session() as sess:
       identity_module_output_2d = identity_module(self.input_2d, self.weights_2d, self.biases_2d, self.act)
       #identity_module_output_4d = identity_module(self.input_4d, self.weights_4d, self.biases_4d, self.act)
-      #self.assertAllEqual(identity_module_output_2d.eval(), self.input_2d)
-      #self.assertAllEqual(identity_module_output_4d.eval(), input_4d)
       print('identity_module works for 2d case: diff=', np.sum(identity_module_output_2d - self.input_2d))
       #print('identity_module works for 4d case: diff=', np.sum(identity_module_output_4d - input_4d))
 
     # Perceptron Module
     with tf.Session() as sess:
       perceptron_module_output_2d = perceptron_module(self.input_2d, self.weights_2d, self.biases_2d, self.act)
-      #self.assertAllEqual(perceptron_module_output_2d.eval(), self.correct_perceptron_output_2d)
       print('perceptron_module works for 2d case: diff=', np.sum(perceptron_module_output_2d.eval() - self.correct_perceptron_output_2d))
 
       # Residual Perceptron Module
     correct_residual_perceptron_output_2d = self.correct_perceptron_output_2d + self.input_2d
     with tf.Session() as sess:
       residual_perceptron_module_output_2d = residual_perceptron_module(self.input_2d, self.weights_2d, self.biases_2d, self.act)
-      #self.assertAllEqual(residual_perceptron_module_output_2d.eval(), correct_residual_perceptron_output_2d)
       print('residual_perceptron_module works for 2d case: diff=', np.sum(residual_perceptron_module_output_2d.eval() - correct_residual_perceptron_output_2d))
 
 
@@ -99,7 +95,6 @@ class ModuleUnitTest():
     with tf.Session() as sess:
       # use default act and func: tf.nn.relu and perceptron_module
       module_output_2d = module(self.input_2d, self.weights_2d, self.biases_2d)
-      #self.assertAllEqual(module_output_2d.eval(), self.correct_module_output_2d)
       print('module works for 2d case: diff =', np.sum(module_output_2d.eval() - self.correct_module_output_2d))
 
 
