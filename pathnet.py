@@ -175,8 +175,8 @@ def input_to_module(input_tensor,
       tensor_to_sum.append(input_tensor[i]) # The way of getting the tensor will depend on if its a list or a R+1 rank tensor
       # tensor_to_sum.append(input_tensor[i,:,:,:])
     else:
-      shape_shift_weights = weights_dict['shape_shift_weights_'+ str(layer_number) + '_' + str(shape) + '_' + str(output_shape)]
-      shape_shift_biases  = weights_dict['shape_shift_biases_' + str(layer_number) + '_' + str(shape) + '_' + str(output_shape)]
+      shape_shift_weights = weights_dict['shape_shift_weights_layer_'+ str(layer_number) + '_to_' + str(layer_number-1) + '_' + str(shape) + '_' + str(output_shape)]
+      shape_shift_biases  = weights_dict['shape_shift_biases_'+ str(layer_number) + '_to_' + str(layer_number-1) + '_' + str(shape) + '_' + str(output_shape)]
       tensor_to_sum.append(
           # TODO change the func and func_params to something valid
           reshape_connection(input_tensor[i], shape_shift_weights, shape_shift_biases, func=conv_module, func_params=None)
@@ -247,19 +247,23 @@ def layer(input_tensor,
   gate_weights = [weights_dict['gate_weights_' + str(layer_number) + '_' + module] for module in range(M)]
   gate_biases  = [weights_dict['gate_biases_'  + str(layer_number) + '_' + module] for module in range(M)]
 
-  M = len(current_layer_structure)
   # Get the structure of the current layer
   layer_stucture = get_layer_structure(M, layer_number, current_layer_structure=current_layer_structure)
   # Get the gating values for the layer
   gates = gating_layer(input_tensor, input_image, gate_weights, gate_biases, gate_name='gate_'+str(layer_number), gamma=1)
 
   tensor_output = []
-  for i, module_func in enumerate(layer_stucture):
-    output_shape = module_func[0] # TODO figure out exactly what to call for this
-    # Get the input of the module into the right shape (reshape to proper shape and average over previous module outputs)
-    input_to_module = input_to_module(input_tensor, weights_dict, layer_number, prev_layer_structure, output_shape)
+  input_to_shape = {}
+  for i, current_module in enumerate(current_layer_structure):
+    module_shape, module_func = current_module
+
+    # If there are multiple modules that need the same inputs
+    if input_to_shape.get(module_shape) is None:
+      # Get the input of the module into the right shape (reshape to proper shape and average over previous module outputs)
+      input_to_shape[module_shape] = input_to_module(input_tensor, weights_dict, layer_number, prev_layer_structure, module_shape)
+
     # Multiply gate and module values
-    module = gates[i] * module(input_to_module,
+    module = gates[i] * module(input_to_shape[module_shape],
                                weights_list[i],
                                biases_list[i],
                                module_name='module_'+str(layer_number)+'_'+str(i),
@@ -267,31 +271,6 @@ def layer(input_tensor,
                                func=module_func)
     tensor_output.append(module)
   return (tensor_output, gates)
-
-def get_layer_structure(M,
-                       layer_number,
-                       options=None,
-                       current_layer_structure=None):
-  '''Returns a list describing which modules get placed where for a layer
-     Currently this structure is hardcoded, can fix this easily
-
-  ARGS: M: The number of modules a layer has
-        layer_number: Which layer to build the structure for
-        options: Additional options in building the layer structure (TODO actually add options)
-
-  Returns: module_list: A list of names lambda functions that represent the
-                        structure of the layer
-          eg: [identity_module, residual_perceptron_module, identity_module]
-  '''
-  if layer_number == 0:
-    return [perceptron_module for _ in range(M)]
-  else:
-    module_list = []
-    for i in range(M):
-      if i%3 == 0: module_list.append(identity_module)
-      if i%3 == 1: module_list.append(perceptron_module)
-      if i%3 == 2: module_list.append(residual_perceptron_module)
-    return module_list
 
 #####################################################################################
 ###############               BUILD GRAPH                   #########################
