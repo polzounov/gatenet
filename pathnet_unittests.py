@@ -98,6 +98,53 @@ class ModuleUnitTest():
       print('module works for 2d case: diff =', np.sum(module_output_2d.eval() - self.correct_module_output_2d))
 
 
+
+
+
+
+### All of the unit tests for pathnet
+class LayerFunctionsTest:
+
+  def __init__(self):
+    # Initialize needed vars
+    self.act = tf.nn.relu
+    self.input_2d = np.array( # Shape (4,5)
+          [[ 5.21725234,  7.86804288,  7.99242374,  4.45774655, -5.50443247],
+           [ 5.07227163,  0.67308993, -3.9649117 ,  9.85479189,  9.05849196],
+           [-7.78440314,  6.60532817,  7.31782079, -1.52107527,  4.55220238],
+           [ 7.70451637,  9.13639315,  6.29414844,  0.37114561, -7.22741304]])
+
+    self.weights_2d = np.eye(5,5)
+    self.biases_2d  = np.ones([1,5])
+    self.correct_perceptron_output_2d = np.array( # Shape (4,5) - like input
+          [[6.217252340,  8.86804288,  8.99242374,  5.457746550,  0.000000000],
+           [6.072271630,  1.67308993,  0.00000000,  10.85479189,  10.05849196],
+           [0.000000000,  7.60532817,  8.31782079,  0.000000000,  5.552202380],
+           [8.70451637,  10.13639315,  7.29414844,  1.371145610,  0.000000000]])
+
+  def unit_test_layer_functions(self):
+    ''' Tests all of the functions used for the layer functionallity
+    Includes:
+            - reshape_connection
+    TODO:
+
+    '''
+    # Identity module
+    with tf.Session() as sess:
+      identity_module_output_2d = reshape_connection(self.input_2d, self.weights_2d, self.biases_2d)
+      #identity_module_output_4d = identity_module(self.input_4d, self.weights_4d, self.biases_4d, self.act)
+      print('identity_module works for 2d case: diff=', np.sum(identity_module_output_2d - self.input_2d))
+      #print('identity_module works for 4d case: diff=', np.sum(identity_module_output_4d - input_4d))
+
+
+
+
+
+
+
+
+
+
 graph_structure = [ [ ((2,2), identity_module) ],
                     [ ((2,2), identity_module), ((2,2), identity_module), ((3,3), identity_module) ],
                     [ ((2,2), identity_module), ((2,2), identity_module), ((3,3), identity_module) ],
@@ -109,4 +156,6 @@ graph_structure = [ [ ((2,2), identity_module) ],
 if __name__ == '__main__':
     ModuleUnitTest = ModuleUnitTest().unit_test_module()
     ModuleFunctionsTest = ModuleFunctionsTest().unit_test_module_functions()
+    LayerFunctionsTest().unit_test_layer_functions()
+
 
