@@ -390,11 +390,9 @@ def layer(input_tensor,
 #####################################################################################
 ###############               BUILD GRAPH                   #########################
 #####################################################################################
-def build_pathnet_graph(L, M, X, weights_dict, graph_structure):
+def build_pathnet_graph(X, weights_dict, graph_structure):
   '''builds the graph from the variable initialization function and returns the predictions
-  ARGS: L: The number of layers in the network (input counts as an identity layer - so L = len(graph_structure))
-        M: The number of modules per layer
-        X: The input image in the shape of [N, H, W, C]
+  ARGS: X: The input image in the shape of [N, H, W, C]
         weights_dict: Dictionary with the keys being the names of the weights
         graph_structure: Describes the modules and shapes of the graph, (all of the modules,
                          shapes, etc.) (First el is the input shape)
@@ -402,15 +400,17 @@ def build_pathnet_graph(L, M, X, weights_dict, graph_structure):
   Returns: logits: The predictions of the network, same shape as y (batch size N by classes)
            gates : The gate activations for each layer: gate[l] = 1xM tensor with gates for the layer
   '''
-  # Build graph up to the last hidden layer
   next_tensor_input = X
+  L = len(graph_structure)
 
   # Save the gate outputs
   gates = []
-  for layer in range(1,L-1):
-    next_tensor_input, layer_gates = layer(next_tensor_input, X, weights_dict, M, layer,
-                                           prev_layer_structure=graph_structure[layer-1],
-                                           current_layer_structure=graph_structure[layer])
+
+  # Build graph up to the last hidden layer
+  for l in range(1,L-1):
+    next_tensor_input, layer_gates = layer(next_tensor_input, X, weights_dict, l,
+                                           prev_layer_structure=graph_structure[l-1],
+                                           current_layer_structure=graph_structure[l])
     gates.append(layer_gates)
 
   # The final layer that combines all of the modules
