@@ -96,10 +96,20 @@ def gating_layer(layer_input,
 ###############           Function types                    #########################
 #####################################################################################
 
-identity_module   = lambda input_tensor, weights, biases, act: input_tensor
-perceptron_module = lambda input_tensor, weights, biases, act: act(tf.matmul(input_tensor, weights) + biases)
-residual_perceptron_module = lambda input_tensor, weights, biases, act: act(tf.matmul(input_tensor, weights) + biases) + input_tensor
-conv_module = lambda input_tensor, weights, biases, act:  act(tf.nn.conv2d(input_tensor, weights, strides=[1,1,1,1], padding="SAME"))
+def identity_module(input_tensor, weights, biases, act):
+  return input_tensor
+
+def perceptron_module(input_tensor, weights, biases, act):
+  return act(tf.matmul(input_tensor, weights) + biases)
+
+def residual_perceptron_module(input_tensor, weights, biases, act):
+  return act(tf.matmul(input_tensor, weights) + biases) + input_tensor
+
+def conv_module(input_tensor, weights, biases, act):
+  return act(tf.nn.conv2d(input_tensor, weights, strides=[1,1,1,1], padding="SAME"))
+
+def residual_conv_module(input_tensor, weights, biases, act):
+  return act(tf.nn.conv2d(input_tensor, weights, strides=[1,1,1,1], padding="SAME")) + input_tensor
 
 #####################################################################################
 ###############                  MODULES                    #########################
