@@ -124,11 +124,23 @@ def perceptron_module(input_tensor, weights, biases, act):
 def residual_perceptron_module(input_tensor, weights, biases, act):
   return act(tf.matmul(input_tensor, weights) + biases) + input_tensor
 
-def conv_module(input_tensor, weights, biases, act):
-  return act(tf.nn.conv2d(input_tensor, weights, strides=[1,1,1,1], padding="SAME"))
+def conv_module(input_tensor, weights, biases, act, params=None):
+  if params is not None:
+    strides = params.get('strides')
+    padding = params.get('padding')
+  else:
+    strides = [1,1,1,1]
+    padding = "SAME"
+  return act(tf.nn.conv2d(input_tensor, weights, strides=strides, padding=padding))
 
-def residual_conv_module(input_tensor, weights, biases, act):
-  return act(tf.nn.conv2d(input_tensor, weights, strides=[1,1,1,1], padding="SAME")) + input_tensor
+def residual_conv_module(input_tensor, weights, biases, act, params=None):
+  if params is not None:
+    strides = params.get('strides')
+    padding = params.get('padding')
+  else:
+    strides = [1,1,1,1]
+    padding = "SAME"
+  return act(tf.nn.conv2d(input_tensor, weights, strides=strides, padding=padding)) + input_tensor
 
 #####################################################################################
 ###############                  MODULES                    #########################
