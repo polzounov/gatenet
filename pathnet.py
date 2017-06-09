@@ -298,7 +298,7 @@ def get_layer_structure(M,
 #####################################################################################
 def build_pathnet_graph(L, M, X, weights_dict, graph_structure):
   '''builds the graph from the variable initialization function and returns the predictions
-  ARGS: L: The number of layers in the network
+  ARGS: L: The number of layers in the network (input counts as an identity layer - so L = len(graph_structure))
         M: The number of modules per layer
         X: The input image in the shape of [N, H, W, C]
         weights_dict: Dictionary with the keys being the names of the weights
@@ -319,12 +319,14 @@ def build_pathnet_graph(L, M, X, weights_dict, graph_structure):
                                            current_layer_structure=graph_structure[layer])
     gates.append(layer_gates)
 
-  # FINISH THIS PART
-  output_shape = graph_structure[L-1][0]
+  # The final layer that combines all of the modules
+  output_shape = graph_structure[L-1][0][0]
+  output_func = graph_structure[L-1][0][1]
+  # Get the average for the last layer's modules
   last_input = input_to_module(next_tensor_input, weights_dict, L, graph_structure[L-2], output_shape)
   output_weights = weights_dict['weights_' + str(L-1) + '_' + module]
   output_biases  = weights_dict['biases_'  + str(L-1) + '_' + module]
-  logits = module(last_input, output_weights, output_biases, layer_name='output_layer', act=tf.nn.relu, func=perceptron_module)
+  logits = module(last_input, output_weights, output_biases, layer_name='output_layer', act=tf.nn.relu, func=output_func)
 
   return (logits, gates)
 
