@@ -46,11 +46,6 @@ def variable_summaries(var): # KEEP
     tf.summary.scalar('min', tf.reduce_min(var))
     tf.summary.histogram('histogram', var)
 
-
-
-
-
-
 #####################################################################################
 ###############             GATING LAYER                    #########################
 #####################################################################################
@@ -211,7 +206,7 @@ def reshape_connection(input_tensor,
     func_params = [0] # NOT IMPLEMENTED
     raise Exception('Not implemented in function: reshape_connection')
     ## ---------------------------------------------------------------
-  return func(input_tensor, weights, biases, func_params)
+  return func(input_tensor, weights, biases, tf.nn.relu)
 
 
 #####################################################################################
