@@ -176,29 +176,27 @@ def input_to_module(input_tensor,
   '''Reshapes (w convs) and sums up the previous layer's modules from the input_tensor
      and returns the sum that will feed into the next layer's modules
 
-  ARGS: input_tensor     : A list of tensors that contain the outputs of the previous 
-                           layer's modules, shape: [M, N, H, W, C]
-        weights_dict     : The weights and biases (used for the reshaping convolutions) 
-        layer_number     : The current layer number
-                             - the number of weights/biases = (n - 1) * n, n = number of sublayers
+  ARGS: input_tensor: A list of tensors that contain the outputs of the previous 
+                      layer's modules, shape: [M, N, H, W, C]
+        weights_dict: The weights and biases (used for the reshaping convolutions) 
+        layer_number: The current layer number
+                    - the number of weights/biases = (n - 1) * n, n = number of sublayers
         prev_layer_structure: A list of shapes from the previous layer
-        output_shape     : The wanted shape for the output
+        output_shape: The wanted shape for the output
 
-  Returns: output_tensor: Reshape (with conv) to the desired output_shape and then 
-                          summed up into one tensor [N, H_n, W_n, C_n]
-                          Where _n corresponds the desired output shape
+  Returns: output_tensor: Reshaped to the desired output_shape and then  summed up into
+                          one tensor [N, H_n, W_n, C_n], where _n corresponds the 
+                          desired output shape
   '''
   tensor_to_sum = []
-  for i, shape in enumerate(prev_layer_structure):
-    if shape == output_shape:
-      tensor_to_sum.append(input_tensor[i]) # The way of getting the tensor will depend on if its a list or a R+1 rank tensor
-      # tensor_to_sum.append(input_tensor[i,:,:,:])
+  for i, module in enumerate(prev_layer_structure):
+    if module[0] == output_shape:
+      tensor_to_sum.append(input_tensor[i])
     else:
       shape_shift_weights = weights_dict['shape_shift_weights_layer_'+ str(layer_number) + '_to_' + str(layer_number-1) + '_' + str(shape) + '_' + str(output_shape)]
       shape_shift_biases  = weights_dict['shape_shift_biases_'+ str(layer_number) + '_to_' + str(layer_number-1) + '_' + str(shape) + '_' + str(output_shape)]
       tensor_to_sum.append(
-          # TODO change the func and func_params to something valid
-          reshape_connection(input_tensor[i], shape_shift_weights, shape_shift_biases, func=conv_module, func_params=None)
+          reshape_connection(input_tensor[i], shape_shift_weights, shape_shift_biases)
       )
   output_tensor = np.sum(tensor_to_sum) # TODO Make sure this sum works
   return output_tensor
