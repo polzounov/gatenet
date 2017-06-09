@@ -51,27 +51,47 @@ def variable_summaries(var): # KEEP
 #####################################################################################
 def gating_layer(layer_input,
                  image_input,
+                 layer_number,
                  gate_weights,
                  gate_biases,
                  gate_name=None,
-                 gamma=1):
+                 prev_layer_structure=None,
+                 gamma=1.333):
 
   '''Calculates the gating of the next layer based on the input image and previous layer
-  ARGS: layer_input: The output all of the modules in the previous layer 
-                   - [M_prev, N, H_L, W_L, C_L] (where L is the layer where input tensor
-                     is coming from and M_pev is the number of modules from the previous 
-                     layer
+  ARGS: layer_input: A list of the outputs all of the modules in the previous layer, where
+                     each is shape: [N, H_L, W_L, C_L] (where L is the layer where input tensor
+                     is coming from, the list is length of M_pev (number of modules from 
+                     the previous layer)
         image_input: The input images given to the network - [N, H, W, C]
-        gating_weights: The weights of the gates in the current layer (only one set 
-                        of gating weights) - [H*W*C, M] (M is the modules in the current layer)
-        gating_biases: The biases of the gates in the current layer - [M]
+        image_input: The number of the current layer
+        gate_weights: The weights of the gates in the current layer (only one set 
+                        of gate weights) - [H*W*C, M] (M is the modules in the current layer)
+        gate_biases: The biases of the gates in the current layer - [M]
+        gate_name : The name of the gates (for scoping)
         gamma (optional): The exponent term to use to encourage sparity
+
+  Notes: 
+      - Currently reshapes the outputs of the previous layer's modules into the shape of the
+        smallest of the previous layer's module shapes
+      - This solution (summing) is likely only good when the outputs of the modules are
+        sparse, we should also consider other methods of gating
 
 
   Returns: gates: The gating outputs of the previous layer [M]
   '''
 
-  ### TODO: Finish this
+  # ONLY WORKS FOR 2D case - gets the smallest module shape in the layer
+  smallest_shape = prev_layer_structure
+  for module in prev_layer_structure:
+    if module[0][1] < smallest_shape[1]:
+      smallest_shape = module[0]
+
+  last_layer_module_summed = input_to_module(input_tensor,
+                                             weights_dict,
+                                             layer_number,
+                                             prev_layer_structure,
+                                             smallest_shape)
 
   # Adding a name scope ensures logical grouping of the layers in the graph.
   with tf.name_scope(gate_name):
@@ -80,11 +100,15 @@ def gating_layer(layer_input,
       variable_summaries(gate_weights)
     with tf.name_scope('gate_biases'):
       variable_summaries(gate_biases)
-    with tf.name_scope('Wx_plus_b'):
-      input_flattened = layer_input.reshape(-1, )
+    with tf.name_scope('gates_unnormalized'):
+      gates_unnormalized = tf.matmul(last_layer_module_summed, gate_weights) + gate_biases
+      variable_summaries(gates_unnormalized)
+    with tf.name_scope('gates_normalized'):
+      gates_pow = tf.pow(gates_unnormalized, gamma)
+      gates_normalized = gates_pow / tf.reduce_sum(gates_pow)
+      variable_summaries(gates_normalized)
 
-      gating_layer_input = tf.matmul(input_flattened, gate_weights) + gate_biases
-  return tf.nn.softmax(gating_layer_input)
+  return tf.nn.softmax(gates_normalized)
 
 
 #####################################################################################
@@ -246,10 +270,10 @@ def layer(input_tensor,
   gate_weights = [weights_dict['gate_weights_' + str(layer_number) + '_' + module] for module in range(M)]
   gate_biases  = [weights_dict['gate_biases_'  + str(layer_number) + '_' + module] for module in range(M)]
 
-  # Get the structure of the current layer
-  layer_stucture = get_layer_structure(M, layer_number, current_layer_structure=current_layer_structure)
   # Get the gating values for the layer
-  gates = gating_layer(input_tensor, input_image, gate_weights, gate_biases, gate_name='gate_'+str(layer_number), gamma=1)
+  gates = gating_layer(input_tensor, input_image, layer_number, 
+                       gate_weights, gate_biases, gate_name='gate_'+str(layer_number), 
+                       prev_layer_structure=prev_layer_structure, gamma=1)
 
   tensor_output = []
   input_to_shape = {}
