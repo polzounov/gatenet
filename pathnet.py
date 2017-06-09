@@ -49,7 +49,7 @@ def variable_summaries(var): # KEEP
 #####################################################################################
 ###############            Initalize Params                 #########################
 #####################################################################################
-def init_params(graph_structure):
+def init_params(graph_structure, classes=2):
   '''Initalizes all of the weights, biases, gating params, and reshaping params based
      on the graph definition given by graph_structure
 
@@ -62,6 +62,7 @@ def init_params(graph_structure):
                       [ ((2,2), identity_module), ((2,2), identity_module), ((3,3), identity_module) ],
                       [ ((2,2), identity_module) ]
                   ]
+        classes: The number of classes to ouput in the final layer
 
   Notes: 
       - TODO: get working with 4D shapes
@@ -113,6 +114,17 @@ def init_params(graph_structure):
     biases  = bias_variable([M,])
     weights_dict['weights_'+ str(l) + '_' + m] = weights
     weights_dict['biases_' + str(l) + '_' + m] = biases
+
+  # Weights for the final output layer
+  output_layer_shape = graph_structure[L-1][0][0]
+  # Get weights to go from shape (N, A) to shape (N, C), where N is batch size, and C is the 
+  # number of classes to output (eg binary mnist = 2)
+  # Weights are shape (A, C), and biases shape (C)
+  N, A = output_layer_shape
+  weights = weight_variable([A, classes])
+  biases  = bias_variable([classes,])
+  weights_dict['weights_'+ str(L-1) + '_' + module] = output_weights
+  weights_dict['biases_' + str(L-1) + '_' + module] = output_biases
 
 #####################################################################################
 ###############             GATING LAYER                    #########################
