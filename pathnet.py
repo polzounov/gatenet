@@ -47,6 +47,74 @@ def variable_summaries(var): # KEEP
     tf.summary.histogram('histogram', var)
 
 #####################################################################################
+###############            Initalize Params                 #########################
+#####################################################################################
+def init_params(graph_structure):
+  '''Initalizes all of the weights, biases, gating params, and reshaping params based
+     on the graph definition given by graph_structure
+
+  ARGS: graph_structure: a list of lists of tuples defining the graph_structure
+  Example graph:
+  graph_structure = [ [ ((2,2), identity_module) ],
+                      [ ((2,2), identity_module), ((2,2), identity_module), ((3,3), identity_module) ],
+                      [ ((2,2), identity_module), ((2,2), identity_module), ((3,3), identity_module) ],
+                      [ ((2,2), identity_module), ((3,3), identity_module), ((4,4), identity_module) ],
+                      [ ((2,2), identity_module), ((2,2), identity_module), ((3,3), identity_module) ],
+                      [ ((2,2), identity_module) ]
+                  ]
+
+  Notes: 
+      - TODO: get working with 4D shapes
+
+  Returns: weights_dict: A python dictionary with all of the needed params
+  '''
+  L = len(graph_structure)
+  for l in range(1,L-1):
+    prev_layer = graph_structure[l-1]
+    current_layer = graph_structure[l]
+
+    # Get shape shift weights and biases
+    distinct_input_shapes  = list(set([module[0] for module in prev_layer]))
+    distinct_output_shapes = list(set([module[0] for module in current_layer]))
+    for input_shape in distinct_input_shapes:
+      for output_shape in distinct_output_shapes:
+        if input_shape != output_shape:
+          # Get weights to go from shape (N, A) to shape (N, B), where N is batch size
+          # Weights are shape (A, B), and biases shape (B)
+          N, A = input_shape
+          N, B = output_shape
+          weights = weight_variable([A, B])
+          biases = bias_variable([B,])
+          weights_dict['shape_shift_weights_layer_'+ str(l) + '_to_' + str(l-1) + '_' + str(input_shape) + '_' + str(output_shape)] = weights
+          weights_dict['shape_shift_biases_layer_' + str(l) + '_to_' + str(l-1) + '_' + str(input_shape) + '_' + str(output_shape)] = biases
+
+    # Get the module parameters
+    for m, module in enumerate(current_layer):
+      shape, func = module
+      # Get weights to go from shape (N, A) to shape (N, A), where N is batch size
+      # Weights are shape (A, A), and biases shape (A)
+      N, A = shape
+      weights = weight_variable([A, A])
+      biases  = bias_variable([A,])
+      weights_dict['weights_'+ str(l) + '_' + m] = weights
+      weights_dict['biases_' + str(l) + '_' + m] = biases
+
+    # Get the gate parameters - very specific to the implementation of the current gating layer
+    smallest_shape = prev_layer_structure[0][0]
+    for module in prev_layer_structure:
+      if module[0][1] < smallest_shape[1]:
+        smallest_shape = module[0]
+    # Get weights to go from shape (N, A) to shape (N, M), where N is batch size and M is the
+    # number of modules in the current layer
+    # Weights are shape (A, M), and biases shape (M)
+    N, A = smallest_shape
+    M = len(current_layer)
+    weights = weight_variable([A, M])
+    biases  = bias_variable([M,])
+    weights_dict['weights_'+ str(l) + '_' + m] = weights
+    weights_dict['biases_' + str(l) + '_' + m] = biases
+
+#####################################################################################
 ###############             GATING LAYER                    #########################
 #####################################################################################
 def gating_layer(layer_input,
@@ -82,7 +150,7 @@ def gating_layer(layer_input,
   '''
 
   # ONLY WORKS FOR 2D case - gets the smallest module shape in the layer
-  smallest_shape = prev_layer_structure
+  smallest_shape = prev_layer_structure[0][0]
   for module in prev_layer_structure:
     if module[0][1] < smallest_shape[1]:
       smallest_shape = module[0]
@@ -206,7 +274,7 @@ def input_to_module(input_tensor,
       tensor_to_sum.append(input_tensor[i])
     else:
       shape_shift_weights = weights_dict['shape_shift_weights_layer_'+ str(layer_number) + '_to_' + str(layer_number-1) + '_' + str(shape) + '_' + str(output_shape)]
-      shape_shift_biases  = weights_dict['shape_shift_biases_'+ str(layer_number) + '_to_' + str(layer_number-1) + '_' + str(shape) + '_' + str(output_shape)]
+      shape_shift_biases  = weights_dict['shape_shift_biases_layer_' + str(layer_number) + '_to_' + str(layer_number-1) + '_' + str(shape) + '_' + str(output_shape)]
       tensor_to_sum.append(
           reshape_connection(input_tensor[i], shape_shift_weights, shape_shift_biases)
       )
@@ -275,10 +343,10 @@ def layer(input_tensor,
   M = len(current_layer_structure)
 
   # Get a list of weights, biases, etc for the current layer from the weights_dict
-  weights_list = [weights_dict['weights_' + str(layer_number) + '_' + module] for module in range(M)]
-  biases_list  = [weights_dict['biases_'  + str(layer_number) + '_' + module] for module in range(M)]
-  gate_weights = [weights_dict['gate_weights_' + str(layer_number) + '_' + module] for module in range(M)]
-  gate_biases  = [weights_dict['gate_biases_'  + str(layer_number) + '_' + module] for module in range(M)]
+  weights_list = [weights_dict['weights_'+ str(layer_number) + '_' + module] for module in range(M)]
+  biases_list  = [weights_dict['biases_' + str(layer_number) + '_' + module] for module in range(M)]
+  gate_weights = weights_dict['gate_weights_'+ str(layer_number)]
+  gate_biases  = weights_dict['gate_biases_' + str(layer_number)]
 
   # Get the gating values for the layer
   gates = gating_layer(input_tensor, input_image, layer_number, 
