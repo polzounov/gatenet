@@ -187,7 +187,7 @@ def input_to_module(input_tensor,
 def reshape_connection(input_tensor,
                        weights,
                        biases,
-                       func=conv_module, # CHANGE TO SOMETHING VALID
+                       func=perceptron_module,
                        func_params=None, # CHANGE TO SOMETHING VALID
                        output_shape=None):
   '''Reshapes a tensor into the the desired shape 
