@@ -88,8 +88,8 @@ def init_params(graph_structure, classes=2):
           N, B = output_shape
           weights = weight_variable([A, B])
           biases = bias_variable([B,])
-          weights_dict['shape_shift_weights_layer_'+ str(l) + '_to_' + str(l-1) + '_' + str(input_shape) + '_' + str(output_shape)] = weights
-          weights_dict['shape_shift_biases_layer_' + str(l) + '_to_' + str(l-1) + '_' + str(input_shape) + '_' + str(output_shape)] = biases
+          weights_dict['shape_shift_weights_layer_'+ str(l-1) + '_to_' + str(l) + '_' + str(input_shape) + '_' + str(output_shape)] = weights
+          weights_dict['shape_shift_biases_layer_' + str(l-1) + '_to_' + str(l) + '_' + str(input_shape) + '_' + str(output_shape)] = biases
 
     # Get the module parameters
     for m, module in enumerate(current_layer):
@@ -99,12 +99,12 @@ def init_params(graph_structure, classes=2):
       N, A = shape
       weights = weight_variable([A, A])
       biases  = bias_variable([A,])
-      weights_dict['weights_'+ str(l) + '_' + m] = weights
-      weights_dict['biases_' + str(l) + '_' + m] = biases
+      weights_dict['weights_'+ str(l) + '_' + str(m)] = weights
+      weights_dict['biases_' + str(l) + '_' + str(m)] = biases
 
     # Get the gate parameters - very specific to the implementation of the current gating layer
-    smallest_shape = prev_layer_structure[0][0]
-    for module in prev_layer_structure:
+    smallest_shape = prev_layer[0][0]
+    for module in prev_layer:
       if module[0][1] < smallest_shape[1]:
         smallest_shape = module[0]
     # Get weights to go from shape (N, A) to shape (N, M), where N is batch size and M is the
@@ -114,8 +114,8 @@ def init_params(graph_structure, classes=2):
     M = len(current_layer)
     weights = weight_variable([A, M])
     biases  = bias_variable([M,])
-    weights_dict['weights_'+ str(l) + '_' + m] = weights
-    weights_dict['biases_' + str(l) + '_' + m] = biases
+    weights_dict['weights_'+ str(l) + '_' + str(m)] = weights
+    weights_dict['biases_' + str(l) + '_' + str(m)] = biases
 
   # Weights for the final output layer
   output_layer_shape = graph_structure[L-1][0][0]
@@ -123,10 +123,10 @@ def init_params(graph_structure, classes=2):
   # number of classes to output (eg binary mnist = 2)
   # Weights are shape (A, C), and biases shape (C)
   N, A = output_layer_shape
-  weights = weight_variable([A, classes])
-  biases  = bias_variable([classes,])
-  weights_dict['weights_'+ str(L-1) + '_' + module] = output_weights
-  weights_dict['biases_' + str(L-1) + '_' + module] = output_biases
+  output_weights = weight_variable([A, classes])
+  output_biases  = bias_variable([classes,])
+  weights_dict['output_weights_'+ str(L-1)] = output_weights
+  weights_dict['output_biases_' + str(L-1)] = output_biases
 
   return weights_dict
 
@@ -420,8 +420,8 @@ def build_pathnet_graph(X, weights_dict, graph_structure):
   output_func = graph_structure[L-1][0][1]
   # Get the average for the last layer's modules
   last_input = input_to_module(next_tensor_input, weights_dict, L, graph_structure[L-2], output_shape)
-  output_weights = weights_dict['weights_' + str(L-1) + '_' + module]
-  output_biases  = weights_dict['biases_'  + str(L-1) + '_' + module]
+  output_weights = weights_dict['output_weights_'+ str(L-1)]
+  output_biases  = weights_dict['output_biases_' + str(L-1)]
   logits = module(last_input, output_weights, output_biases, layer_name='output_layer', act=tf.nn.relu, func=output_func)
 
   return (logits, gates)
