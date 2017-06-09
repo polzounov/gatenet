@@ -69,7 +69,9 @@ def init_params(graph_structure, classes=2):
 
   Returns: weights_dict: A python dictionary with all of the needed params
   '''
+  weights_dict = {}
   L = len(graph_structure)
+
   for l in range(1,L-1):
     prev_layer = graph_structure[l-1]
     current_layer = graph_structure[l]
