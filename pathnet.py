@@ -33,7 +33,7 @@ def bias_variable(shape): # KEEP
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial)
 
-  
+
 def variable_summaries(var): # KEEP
   """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
   with tf.name_scope('summaries'):
@@ -81,14 +81,14 @@ def gating_layer(layer_input,
   # Adding a name scope ensures logical grouping of the layers in the graph.
   with tf.name_scope(gate_name):
     # This Variable will hold the state of the weights for the layer
-    with tf.name_scope('weights'): 
-      variable_summaries(weights)
-    with tf.name_scope('biases'):
-      variable_summaries(biases)
+    with tf.name_scope('gate_weights'):
+      variable_summaries(gate_weights)
+    with tf.name_scope('gate_biases'):
+      variable_summaries(gate_biases)
     with tf.name_scope('Wx_plus_b'):
       input_flattened = layer_input.reshape(-1, )
 
-      gating_layer_input = tf.matmul(input_flattened, weights) + biases
+      gating_layer_input = tf.matmul(input_flattened, gate_weights) + gate_biases
   return tf.nn.softmax(gating_layer_input)
 
 
@@ -115,7 +115,7 @@ def module(input_tensor,
      traditional NN layer, or even a NN itself
      Here it's the equivalent of a traditional NN layer
 
-  ARGS: input_tensor  : The resampled and summer tensor output from the previous layer, 
+  ARGS: input_tensor  : The reshaped and summer tensor output from the previous layer,
                         shape [N,H,W,C]
         weights       : The weights for the module (only the current module's weights)
         biases        : The biases for the module
@@ -144,7 +144,7 @@ def input_to_module(input_tensor,
                     layer_number,
                     prev_layer_structure,
                     output_shape):
-  '''Resizes (w convs) and sums up the previous layer's modules from the input_tensor
+  '''Reshapes (w convs) and sums up the previous layer's modules from the input_tensor
      and returns the sum that will feed into the next layer's modules
 
   ARGS: input_tensor     : A list of tensors that contain the outputs of the previous 
@@ -168,8 +168,8 @@ def input_to_module(input_tensor,
       shape_shift_weights = weights_dict['shape_shift_weights_'+ str(layer_number) + '_' + str(shape) + '_' + str(output_shape)]
       shape_shift_biases  = weights_dict['shape_shift_biases_' + str(layer_number) + '_' + str(shape) + '_' + str(output_shape)]
       tensor_to_sum.append(
-          # TODO change the func and func_params to somethin valid
-          reshape_connection(input_tensor[i], shape_shift_weights, shape_shift_biases, func=convx, func_params=None)
+          # TODO change the func and func_params to something valid
+          reshape_connection(input_tensor[i], shape_shift_weights, shape_shift_biases, func=conv_module, func_params=None)
       )
   output_tensor = np.sum(tensor_to_sum) # TODO Make sure this sum works
   return output_tensor
@@ -177,7 +177,7 @@ def input_to_module(input_tensor,
 def reshape_connection(input_tensor,
                        weights,
                        biases,
-                       func=convx, # CHANGE TO SOMETHING VALID
+                       func=conv_module, # CHANGE TO SOMETHING VALID
                        func_params=None, # CHANGE TO SOMETHING VALID
                        output_shape=None):
   '''Reshapes a tensor into the the desired shape 
@@ -187,7 +187,7 @@ def reshape_connection(input_tensor,
         biases      : The biases
         func        : A lambda function of what function you want to use to reshape
                       the input tensor (conv, perceptron, etc.)
-        func_params : (opt) The params for a conv/other (put into labmda func???)
+        func_params : (opt) The params for a conv/other (put into lambda func???)
         output_shape: (opt) If no func params are given then automatically infer 
                       from output_shape
 
@@ -228,7 +228,8 @@ def layer(input_tensor,
 
 
   Returns: output_tensor: The outputs of all of the tensors in the previous layer
-  ''' 
+  '''
+  M = len(current_layer_structure)
 
   # Get a list of weights, biases, etc for the current layer from the weights_dict
   weights_list = [weights_dict['weights_' + str(layer_number) + '_' + module] for module in range(M)]
@@ -240,18 +241,19 @@ def layer(input_tensor,
   # Get the structure of the current layer
   layer_stucture = get_layer_structure(M, layer_number, current_layer_structure=current_layer_structure)
   # Get the gating values for the layer
-  gates = gating_layer(input_tensor, image_input, gate_weights, gate_biases, gate_name='gate_'+str(layer_number), gamma=1)
+  gates = gating_layer(input_tensor, input_image, gate_weights, gate_biases, gate_name='gate_'+str(layer_number), gamma=1)
 
   tensor_output = []
   for i, module_func in enumerate(layer_stucture):
+    output_shape = module_func[0] # TODO figure out exactly what to call for this
     # Get the input of the module into the right shape (reshape to proper shape and average over previous module outputs)
-    input_to_module = input_to_module_shape(input_tensor, weights_dict, layer_number, prev_layer_structure, output_shape)
+    input_to_module = input_to_module(input_tensor, weights_dict, layer_number, prev_layer_structure, output_shape)
     # Multiply gate and module values
-    module = gates[i] * module(input_to_module, 
-                               weights_list[i], 
-                               biases_list[i], 
+    module = gates[i] * module(input_to_module,
+                               weights_list[i],
+                               biases_list[i],
                                module_name='module_'+str(layer_number)+'_'+str(i),
-                               act=tf.nn.relu, 
+                               act=tf.nn.relu,
                                func=module_func)
     tensor_output.append(module)
   return (tensor_output, gates)
@@ -267,7 +269,7 @@ def get_layer_structure(M,
         layer_number: Which layer to build the structure for
         options: Additional options in building the layer structure (TODO actually add options)
 
-  Returns: module_list: A list of names labmda functions that represent the 
+  Returns: module_list: A list of names lambda functions that represent the
                         structure of the layer
           eg: [identity_module, residual_perceptron_module, identity_module]
   '''
@@ -302,7 +304,7 @@ def build_pathnet_graph(L, M, X, weights_dict, graph_structure):
   # Save the gate outputs
   gates = []
   for layer in range(1,L-1):
-    next_tensor_input, layer_gates = layer(next_tensor_input, X, weights_dict, M, layer, 
+    next_tensor_input, layer_gates = layer(next_tensor_input, X, weights_dict, M, layer,
                                            prev_layer_structure=graph_structure[layer-1],
                                            current_layer_structure=graph_structure[layer])
     gates.append(layer_gates)
@@ -312,7 +314,7 @@ def build_pathnet_graph(L, M, X, weights_dict, graph_structure):
   last_input = input_to_module(next_tensor_input, weights_dict, L, graph_structure[L-2], output_shape)
   output_weights = weights_dict['weights_' + str(L-1) + '_' + module]
   output_biases  = weights_dict['biases_'  + str(L-1) + '_' + module]
-  logits = module(input_tensor, output_weights, output_biases, layer_name='output_layer', act=tf.nn.relu, func=perceptron_module)
+  logits = module(last_input, output_weights, output_biases, layer_name='output_layer', act=tf.nn.relu, func=perceptron_module)
 
   return (logits, gates)
 
