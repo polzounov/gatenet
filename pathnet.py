@@ -198,6 +198,9 @@ def reshape_connection(input_tensor,
 
   Returns: The tensor reshaped using func
   '''
+
+  # The following is for the 4d case
+  '''
   if func_params is None:
     if output_shape is None:
       raise Exception('Function: reshape_connection, need one of func_params or output_shape')
@@ -206,6 +209,7 @@ def reshape_connection(input_tensor,
     func_params = [0] # NOT IMPLEMENTED
     raise Exception('Not implemented in function: reshape_connection')
     ## ---------------------------------------------------------------
+  '''
   return func(input_tensor, weights, biases, tf.nn.relu)
 
 
