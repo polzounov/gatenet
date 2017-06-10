@@ -373,8 +373,8 @@ def layer(input_tensor,
   M = len(current_layer_structure)
 
   # Get a list of weights, biases, etc for the current layer from the weights_dict
-  weights_list = [weights_dict['weights_'+ str(layer_number) + '_' + module] for module in range(M)]
-  biases_list  = [weights_dict['biases_' + str(layer_number) + '_' + module] for module in range(M)]
+  weights_list = [weights_dict['weights_'+ str(layer_number) + '_' + str(module)] for module in range(M)]
+  biases_list  = [weights_dict['biases_' + str(layer_number) + '_' + str(module)] for module in range(M)]
   gate_weights = weights_dict['gate_weights_'+ str(layer_number)]
   gate_biases  = weights_dict['gate_biases_' + str(layer_number)]
 
