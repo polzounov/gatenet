@@ -137,21 +137,77 @@ class LayerFunctionsTest:
       #print('identity_module works for 4d case: diff=', np.sum(identity_module_output_4d - input_4d))
 
 
+class InitParamsTest
 
+  def __init__(self):
+    self.correct_weights_list = 
+    ['output_weights_5',
+    'weights_2_1',
+    'weights_4_1',
+    'weights_1_0',
+    'shape_shift_weights_layer_0_to_1_(None, 2)_(None, 3)',
+    'shape_shift_weights_layer_3_to_4_(None, 4)_(None, 2)',
+    'shape_shift_weights_layer_1_to_2_(None, 3)_(None, 2)',
+    'biases_3_1',
+    'weights_4_0',
+    'shape_shift_biases_layer_1_to_2_(None, 2)_(None, 3)',
+    'shape_shift_biases_layer_3_to_4_(None, 3)_(None, 2)',
+    'shape_shift_biases_layer_3_to_4_(None, 2)_(None, 3)',
+    'output_biases_5',
+    'weights_1_2',
+    'shape_shift_biases_layer_3_to_4_(None, 4)_(None, 3)',
+    'weights_3_1',
+    'shape_shift_weights_layer_3_to_4_(None, 3)_(None, 2)',
+    'shape_shift_weights_layer_4_to_5_(None, 3)_(None, 3)',
+    'shape_shift_biases_layer_0_to_1_(None, 2)_(None, 3)',
+    'biases_2_1',
+    'shape_shift_weights_layer_2_to_3_(None, 3)_(None, 2)',
+    'biases_3_0',
+    'biases_2_0',
+    'weights_4_2',
+    'biases_4_2',
+    'shape_shift_biases_layer_2_to_3_(None, 3)_(None, 4)',
+    'biases_4_0',
+    'shape_shift_weights_layer_2_to_3_(None, 3)_(None, 4)',
+    'shape_shift_weights_layer_1_to_2_(None, 2)_(None, 3)',
+    'shape_shift_biases_layer_1_to_2_(None, 3)_(None, 2)',
+    'biases_1_1',
+    'shape_shift_biases_layer_2_to_3_(None, 2)_(None, 3)',
+    'biases_4_1',
+    'shape_shift_weights_layer_2_to_3_(None, 2)_(None, 3)',
+    'shape_shift_biases_layer_4_to_5_(None, 3)_(None, 3)',
+    'shape_shift_biases_layer_2_to_3_(None, 3)_(None, 2)',
+    'shape_shift_biases_layer_2_to_3_(None, 2)_(None, 4)',
+    'biases_2_2',
+    'weights_3_0',
+    'weights_3_2',
+    'shape_shift_biases_layer_3_to_4_(None, 4)_(None, 2)',
+    'biases_3_2',
+    'weights_1_1',
+    'shape_shift_weights_layer_3_to_4_(None, 2)_(None, 3)',
+    'shape_shift_weights_layer_2_to_3_(None, 2)_(None, 4)',
+    'weights_2_0',
+    'weights_2_2',
+    'biases_1_0',
+    'biases_1_2',
+    'shape_shift_weights_layer_3_to_4_(None, 4)_(None, 3)']
+    self.graph_structure = [ [ ((None,2), identity_module) ],
+                           [ ((None,2), identity_module), ((None,2), identity_module), ((None,3), identity_module) ],
+                           [ ((None,2), identity_module), ((None,2), identity_module), ((None,3), identity_module) ],
+                           [ ((None,2), identity_module), ((None,3), identity_module), ((None,4), identity_module) ],
+                           [ ((None,2), identity_module), ((None,2), identity_module), ((None,3), identity_module) ],
+                           [ ((None,2), identity_module) ] ]
 
+  def unit_test_init_params(self):
+    import pprint
+    pp = pprint.PrettyPrinter(indent=4)
 
+    weights_dict = pathnet.init_params(self.graph_structure, classes=2)
+    print('\nWeights dict includes the following variables:')
+    pp.pprint(list(weights_dict.keys()))
+    print('\n\nThe correct list is:')
+    print(self.correct_weights_list)
 
-
-
-
-
-graph_structure = [ [ ((2,2), identity_module) ],
-                    [ ((2,2), identity_module), ((2,2), identity_module), ((3,3), identity_module) ],
-                    [ ((2,2), identity_module), ((2,2), identity_module), ((3,3), identity_module) ],
-                    [ ((2,2), identity_module), ((3,3), identity_module), ((4,4), identity_module) ],
-                    [ ((2,2), identity_module), ((2,2), identity_module), ((3,3), identity_module) ],
-                    [ ((2,2), identity_module) ]
-                  ]
 
 if __name__ == '__main__':
     ModuleUnitTest = ModuleUnitTest().unit_test_module()

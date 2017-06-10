@@ -117,6 +117,20 @@ def init_params(graph_structure, classes=2):
     weights_dict['weights_'+ str(l) + '_' + str(m)] = weights
     weights_dict['biases_' + str(l) + '_' + str(m)] = biases
 
+  # Weights for reshaping inputs into the final layer
+  distinct_input_shapes  = list(set([module[0] for module in graph_structure[L-2]]))
+  output_layer_shape = graph_structure[L-1][0][0]
+  for input_shape in distinct_input_shapes:
+    if input_shape != output_layer_shape:
+      # Get weights to go from shape (N, A) to shape (N, B), where N is batch size
+      # Weights are shape (A, B), and biases shape (B)
+      N, A = input_shape
+      N, B = output_layer_shape
+      weights = weight_variable([A, B])
+      biases = bias_variable([B,])
+      weights_dict['shape_shift_weights_layer_'+ str(L-2) + '_to_' + str(L-1) + '_' + str(input_shape) + '_' + str(output_shape)] = weights
+      weights_dict['shape_shift_biases_layer_' + str(L-2) + '_to_' + str(L-1) + '_' + str(input_shape) + '_' + str(output_shape)] = biases
+
   # Weights for the final output layer
   output_layer_shape = graph_structure[L-1][0][0]
   # Get weights to go from shape (N, A) to shape (N, C), where N is batch size, and C is the 
