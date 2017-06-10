@@ -114,8 +114,8 @@ def init_params(graph_structure, classes=2):
     M = len(current_layer)
     weights = weight_variable([A, M])
     biases  = bias_variable([M,])
-    weights_dict['weights_'+ str(l) + '_' + str(m)] = weights
-    weights_dict['biases_' + str(l) + '_' + str(m)] = biases
+    weights_dict['gate_weights_'+ str(l) + '_' + str(m)] = weights
+    weights_dict['gate_biases_' + str(l) + '_' + str(m)] = biases
 
   # Weights for reshaping inputs into the final layer
   distinct_input_shapes  = list(set([module[0] for module in graph_structure[L-2]]))
