@@ -34,8 +34,11 @@ def bias_variable(shape): # KEEP
   return tf.Variable(initial)
 
 
-def variable_summaries(var): # KEEP
-  """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+def variable_summaries(var, options=None): # KEEP
+  """Attach a lot of summaries to a Tensor (for TensorBoard visualization).
+    - options is a dictionary with additional options
+  """
+
   with tf.name_scope('summaries'):
     mean = tf.reduce_mean(var)
     tf.summary.scalar('mean', mean)
@@ -45,6 +48,12 @@ def variable_summaries(var): # KEEP
     tf.summary.scalar('max', tf.reduce_max(var))
     tf.summary.scalar('min', tf.reduce_min(var))
     tf.summary.histogram('histogram', var)
+    if options is not None:
+      # Get the total info flowing through the module (useful for understanding 
+      # information flow through the overall network)
+      if options.get('flow') is True:
+        tensor_sum = tf.reduce_sum(var)
+        tf.summary.scalar('flow', tensor_sum)
 
 #####################################################################################
 ###############            Initalize Params                 #########################
@@ -393,13 +402,16 @@ def layer(input_tensor,
       # Get the input of the module into the right shape (reshape to proper shape and average over previous module outputs)
       input_to_shape[module_shape] = input_to_module(input_tensor, weights_dict, layer_number, prev_layer_structure, module_shape)
 
-    # Multiply gate and module values
-    module = gates[i] * module(input_to_shape[module_shape],
-                               weights_list[i],
-                               biases_list[i],
-                               module_name='module_'+str(layer_number)+'_'+str(i),
-                               act=tf.nn.relu,
-                               func=module_func)
+    with tf.name_scope('gated_module_'+str(layer_number)+'_'+str(i)):
+      # Multiply gate and module values
+      module = gates[i] * module(input_to_shape[module_shape],
+                                 weights_list[i],
+                                 biases_list[i],
+                                 module_name='module_'+str(layer_number)+'_'+str(i),
+                                 act=tf.nn.relu,
+                                 func=module_func)
+      variable_summaries(module, options={'flow': True})
+
     tensor_output.append(module)
   return (tensor_output, gates)
 
