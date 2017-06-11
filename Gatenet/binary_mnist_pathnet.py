@@ -3,11 +3,8 @@ from __future__ import division
 from __future__ import print_function
 
 from layers import *
-
 from parameters import Parameters
-
 import data_manager
-
 from tensorflow_utils import *
 
 def train():

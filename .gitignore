@@ -1,3 +1,7 @@
+# For pycharm
+.idea/
+Gatenet/.idea
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
