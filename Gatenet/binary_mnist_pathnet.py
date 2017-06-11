@@ -38,6 +38,7 @@ def train():
   # Initialize Variables
   tf.global_variables_initializer().run()
 
+  writer = tf.summary.FileWriter('./logs', graph=tf.get_default_graph())
 
   for i in range(100):
 
