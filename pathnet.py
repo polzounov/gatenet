@@ -123,8 +123,8 @@ def init_params(graph_structure, classes=2):
     M = len(current_layer)
     weights = weight_variable([A, M])
     biases  = bias_variable([M,])
-    weights_dict['gate_weights_'+ str(l) + '_' + str(m)] = weights
-    weights_dict['gate_biases_' + str(l) + '_' + str(m)] = biases
+    weights_dict['gate_weights_'+ str(l)] = weights
+    weights_dict['gate_biases_' + str(l)] = biases
 
   # Weights for reshaping inputs into the final layer
   distinct_input_shapes  = list(set([module[0] for module in graph_structure[L-2]]))
@@ -161,6 +161,7 @@ def gating_layer(layer_input,
                  layer_number,
                  gate_weights,
                  gate_biases,
+                 weights_dict,
                  gate_name=None,
                  prev_layer_structure=None,
                  gamma=1.333):
@@ -175,6 +176,7 @@ def gating_layer(layer_input,
         gate_weights: The weights of the gates in the current layer (only one set 
                         of gate weights) - [H*W*C, M] (M is the modules in the current layer)
         gate_biases: The biases of the gates in the current layer - [M]
+        weights_dict: Dictionary containing all of the weights (for input to module func)
         gate_name : The name of the gates (for scoping)
         gamma (optional): The exponent term to use to encourage sparity
 
@@ -194,7 +196,7 @@ def gating_layer(layer_input,
     if module[0][1] < smallest_shape[1]:
       smallest_shape = module[0]
 
-  last_layer_module_summed = input_to_module(input_tensor,
+  last_layer_module_summed = input_to_module(layer_input,
                                              weights_dict,
                                              layer_number,
                                              prev_layer_structure,
@@ -389,7 +391,7 @@ def layer(input_tensor,
 
   # Get the gating values for the layer
   gates = gating_layer(input_tensor, input_image, layer_number, 
-                       gate_weights, gate_biases, gate_name='gate_'+str(layer_number), 
+                       gate_weights, gate_biases, weights_dict, gate_name='gate_'+str(layer_number), 
                        prev_layer_structure=prev_layer_structure, gamma=1)
 
   tensor_output = []

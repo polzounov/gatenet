@@ -1,141 +1,76 @@
-#Test
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import pathnet
-from parameters import Parameters
-import data_manager
-import numpy as np
-import time
 import tensorflow as tf
 
+import data_manager
+import pathnet
+import pprint as pp
 
 def train():
-  # Import data
-  tr_data1, tr_label1 = data_manager.get_next_batch()
 
+  # Import data
+  tr_data, tr_label = data_manager.get_next_batch()
+
+  # Start session
   sess = tf.InteractiveSession()
 
   # Input placeholders
-  with tf.name_scope('input'):
-    x = tf.placeholder(tf.float32, [None, 784], name='x-input')
-    y_ = tf.placeholder(tf.float32, [None, 2], name='y-input')
+  X = tf.placeholder(tf.float32, [None, 784], name='x-input')
+  y_ = tf.placeholder(tf.float32, [None, 10], name='y-input')
 
-  with tf.name_scope('input_reshape'):
-    image_shaped_input = tf.reshape(x, [-1, 28, 28, 1])
-    tf.summary.image('input', image_shaped_input, 2)
+  # Build computation graph
+  graph_structure = [ [ ((None,784), pathnet.identity_module) ],
+                      [ ((None,20), pathnet.perceptron_module), ((None,20), pathnet.perceptron_module) ],
+                      [ ((None,20), pathnet.perceptron_module) ],
+                      [ ((None,20), pathnet.perceptron_module) ],
+                      [ ((None,20), pathnet.perceptron_module) ],
+                      [ ((None,10), pathnet.perceptron_module) ]
+                    ]
+  weights_dict = pathnet.init_params(graph_structure, classes=10)
+  print('\n\nKeys:\n')
+  pp.pprint(str(weights_dict.keys()))
+  print('\n\n')
+  y = pathnet.build_pathnet_graph(X, weights_dict, graph_structure)
 
-
-
-  graph_structure = []
-  weights_dict = {}
-
-  # FILL IN
-  tensor_sizes = {}
-  graph_io_sizes = {}
-  num_sublayers = 3
-
-      # Hidden Layers
-  for i in range(Parameters.L):
-    for j in range(Parameters.M):
-          weights_dict['weights_' + str(i) + '_' + str(j)] = pathnet.weight_variable(tensor_sizes['weights_' + str(i) + '_' + str(j)])
-          weights_dict['biases_' + str(i) + '_' + str(j)] = pathnet.bias_variable(tensor_sizes['biases_' + str(i) + '_' + str(j)])
-          weights_dict['gate_weights_' + str(i) + '_' + str(j)] = pathnet.weight_variable(tensor_sizes['gate_weights_' + str(i) + '_' + str(j)])
-          weights_dict['gate_biases_' + str(i) + '_' + str(j)] = pathnet.weight_variable(tensor_sizes['gate_biases_' + str(i) + '_' + str(j)])
-
-    for s1 in range(num_sublayers):
-        for s2 in range(num_sublayers):
-            weights_dict['shape_shift_weights_' + str(i) + '_' + str(s1) + '_' + str(s2)]\
-                = pathnet.weight_variable(tensor_sizes['shape_shift_weights_' + str(i) + '_' + str(s1) + '_' + str(s2)])
-            weights_dict['shape_shift_biases_' + str(i) + '_' + str(s1) + '_' + str(s2)] \
-                = pathnet.bias_variable(
-                tensor_sizes['shape_shift_biases_' + str(i) + '_' + str(s1) + '_' + str(s2)])
-
-
-  graph_structure.append((graph_io_sizes[(0,0)], pathnet.identity_module))
-  for i in range(Parameters.L): # Change indexing
-    for j in range(Parameters.M):
-        graph_structure.append((graph_io_sizes[(i,j)], pathnet.identity_module))
-
-  graph_structure.append((graph_io_sizes[(Parameters.L, 0)], pathnet.identity_module))
-
-
-
-  for i in range(Parameters.L):
-    layer_modules_list = np.zeros(Parameters.M, dtype=object);
-    for j in range(Parameters.M):
-      if (i == 0):
-        layer_modules_list[j] = pathnet.module(x, weights_list[i, j], biases_list[i, j],
-                                               'layer' + str(i + 1) + "_" + str(j + 1))  # *geopath[i,j];
-      else:
-        layer_modules_list[j] = pathnet.module2(j, net, weights_list[i, j], biases_list[i, j],
-                                                'layer' + str(i + 1) + "_" + str(j + 1))  # *geopath[i,j];
-    net = np.sum(layer_modules_list) / Parameters.M;
-
-
-  output_weights = pathnet.module_weight_variable([Parameters.filt, 2]);
-  output_biases = pathnet.module_bias_variable([2]);
-  y = pathnet.nn_layer(net, output_weights, output_biases, 'output_layer');
 
   # Cross Entropy
-  with tf.name_scope('cross_entropy'):
-    diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
-    with tf.name_scope('total'):
-      cross_entropy = tf.reduce_mean(diff)
-  tf.summary.scalar('cross_entropy', cross_entropy)
+  diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
+  cross_entropy = tf.reduce_mean(diff)
 
-  # Need to learn variables
-  var_list_to_learn = [] + output_weights + output_biases;
-  for i in range(Parameters.L):
-    for j in range(Parameters.M):
-      var_list_to_learn += weights_list[i, j] + biases_list[i, j];
-
-  # GradientDescent 
-  with tf.name_scope('train'):
-    train_step = tf.train.GradientDescentOptimizer(Parameters.learning_rate).minimize(cross_entropy,
-                                                                                 var_list=var_list_to_learn);
+  # GradientDescent
+  train_step = tf.train.AdamOptimizer().minimize(cross_entropy)
 
   # Accuracy 
-  with tf.name_scope('accuracy'):
-    with tf.name_scope('correct_prediction'):
-      correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-    with tf.name_scope('accuracy'):
-      accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-  tf.summary.scalar('accuracy', accuracy)
+  correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+  accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-  # Merge all the summaries and write them out to /tmp/tensorflow/mnist/logs/mnist_with_summaries (by default)
-  merged = tf.summary.merge_all()
-  train_writer = tf.summary.FileWriter(Parameters.log_dir + '/train1', sess.graph)
-  test_writer = tf.summary.FileWriter(Parameters.log_dir + '/test1')
+  # Initialize Variables
   tf.global_variables_initializer().run()
 
+  writer = tf.summary.FileWriter('./logs', graph=tf.get_default_graph())
 
+  for i in range(100):
 
-  idx = list(range(len(tr_data1)));
-  np.random.shuffle(idx);
-  tr_data1 = tr_data1[idx];
-  tr_label1 = tr_label1[idx];
+    # Shuffle the data
+    idx=list(range(len(tr_data)))
+    np.random.shuffle(idx)
+    tr_data=tr_data[idx]
+    tr_label=tr_label[idx]
 
-  for i in range(1000):
-    summary_geo_tr, _, acc = sess.run([merged, train_step, accuracy], feed_dict={
-      x: tr_data1,
-      y_: tr_label1});
+    # Insert Candidate
+    acc = 0
+    for k in range(Parameters.T):
+      _, acc_epoc = sess.run([train_step,accuracy],
+                             feed_dict={X:tr_data[k*Parameters.batch_num:(k+1)*Parameters.batch_num,:],
+                                        y_:tr_label[k*Parameters.batch_num:(k+1)*Parameters.batch_num,:]})
+      acc +=acc_epoc
 
-
+    acc=acc/Parameters.T
     print('Training Accuracy at step %s: %s' % (i, acc));
-    '''if (acc >= 0.99):
-      print('Learning Done!!');
-      print('Optimal Path is as followed.');
-      break;
-      '''
-
 
 def main(_):
-  Parameters.log_dir+=str(int(time.time()));
-  if tf.gfile.Exists(Parameters.log_dir):
-    tf.gfile.DeleteRecursively(Parameters.log_dir)
-  tf.gfile.MakeDirs(Parameters.log_dir)
   train()
 
 
