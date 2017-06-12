@@ -19,9 +19,12 @@ class Graph:
 
         ##################################################
         ## Define Hyperparameters
-        M = 3
-        L = 3
+        self.M = 10
+        self.L = 3
         tensor_size = 20
+
+        M = self.M
+        L = self.L
         ##################################################
         
         ##################################################
@@ -70,10 +73,13 @@ class Graph:
 
 
     def determineGates(self, image, x, sess):
-        gates = []
+        gates = np.zeros((self.L, self.M))
         for i in range(len(self.gated_layers)):
             g = sess.run([self.gated_layers[i].gates],
                          feed_dict={x:image})
+            gates[i] = np.array(g)
+        return gates
+
 
 ######################################################################
 
@@ -145,7 +151,7 @@ class GatedLayer(Layer):
                                               bias_variable([len(modules)]))
 
         self.gates = None
-        self.gamma = 0 #1.333
+        self.gamma = 2 #1.333
 
     def computeGates(self, input_tensors):
         gates_unnormalized = self.gate_module.processModule(input_tensors)
@@ -156,8 +162,8 @@ class GatedLayer(Layer):
         num_cols = len(self.modules)
         gates_tiled = tf.tile(gg, [1, num_cols])
 
-        gates_normalized = gates_pow / gates_tiled
-        self.gates = gates_normalized
+        gates_normalized = tf.nn.relu(gates_pow / gates_tiled)
+        self.gates = tf.nn.relu(gates_normalized)
         return gates_normalized
 
     def processLayer(self, input_tensors):
