@@ -11,13 +11,13 @@ from tensorflow.examples.tutorials.mnist import input_data
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
 
-from layers import *
+from Gatenet.layers import *
 
 from parameters import Parameters
 
 import data_manager
 
-from tensorflow_utils import *
+from Gatenet.tensorflow_utils import *
 
 def train():
   # Start session
@@ -56,8 +56,18 @@ def train():
 
   writer = tf.summary.FileWriter('/tmp/tensorflow_logs', graph=tf.get_default_graph())
 
+
+  ######### Test Digit
+  digit = 8
+
   for i in range(10000):
     tr_data, tr_label = mnist.train.next_batch(100)
+    elems = np.where(np.argmax(tr_label, axis=1) != digit)[0]
+    tr_data = tr_data[elems,:]
+    tr_label = tr_label[elems,:]
+
+    if len(tr_data) < 50:
+      continue
 
     if i % 100 == 0:
       acc = sess.run(accuracy, feed_dict={x: tr_data, y_: tr_label})
@@ -74,23 +84,29 @@ def train():
   #saver.restore(sess, tf.train.latest_checkpoint('./'))
 
 
+  number_of_tests = 3
   test_data = mnist.test.images
   test_labels = mnist.test.labels
-  gates = np.zeros((3,10,11))
+  gates = np.zeros((3,10,10 + number_of_tests))
 
 
-  digit = 4
-  elem = np.where(test_labels[:, digit] == 1)
-  elem = elem[0][0]
-  test_image = test_data[elem, :]
-  image1 = np.reshape(test_image, (1, 28 * 28))
-  gates[:, :, 10] = graph.determineGates(image1, x, sess)
+
+  elem = np.where(np.argmax(test_labels, axis=1) == digit)
+  elem = elem[0][:number_of_tests]
+  for i in range(number_of_tests):
+    test_image = test_data[elem[i], :]
+    image1 = np.reshape(test_image, (1, 28 * 28))
+    gates[:, :, 10+i] = graph.determineGates(image1, x, sess)
 
 
 
   tr_data, tr_label = mnist.train.next_batch(50000)
 
   for i in range(10):
+    if i == digit:
+      gates[:,:,i] = np.zeros((3,10))
+      continue
+
     elem = np.where(tr_label[:,i] == 1)
     elem = elem[0][0]
     test_image = tr_data[elem,:]
