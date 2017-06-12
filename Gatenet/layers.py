@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 #from parameters import Parameters
-from tensorflow_utils import *
+from Gatenet.tensorflow_utils import *
 
 
 ######################################################################
