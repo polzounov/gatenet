@@ -4,6 +4,33 @@ import numpy as np
 from tensorflow_utils import *
 
 
+class AdditionSublayerModule:
+    def __init__(self, input_size, num_modules):
+        self.input_size = input_size
+        self.output_size = input_size
+        self.num_modules = num_modules
+
+    def processSublayerModule(self, module_tensors):
+        return np.sum(module_tensors) / self.num_modules
+
+
+
+class Sublayer:
+
+    def __init__(self, input_size, num_modules, sublayer_module):
+        self.input_size = input_size
+        self.sublayer_module = sublayer_module
+        self.num_modules = num_modules
+        self.output_size = self.sublayer_module.output_size
+
+    def processSublayer(self, module_tensors):
+        return self.sublayer_module.processSublayerModule(module_tensors)
+
+
+
+
+
+
 ######################################################################
 ## Code for Graph construction
 
@@ -13,6 +40,7 @@ class Graph:
         self.input_layer = None
         self.gated_layers = None
         self.output_layer = None
+        self.sublayers = None
         
     ## Build graph to test code
     def buildTestGraph(self, input_images, parameter_dict):
@@ -25,13 +53,26 @@ class Graph:
         self.gamma = parameter_dict['gamma']
 
         ##################################################
-        
+
+
+        ##################################################
+        ## Define Sublayers
+
+        self.sublayers = np.zeros(self.L + 1, dtype= object)
+        input_size = self.tensor_size
+        num_modules = self.M
+        for i in range(self.L + 1):
+            self.sublayers[i] = Sublayer(input_size, num_modules, AdditionSublayerModule(input_size,num_modules))
+            input_size = self.sublayers[i].output_size
+
         ##################################################
         ## Define Modules
         
         input_modules = np.zeros(self.M, dtype=object)
         gated_modules = np.zeros((self.L, self.M), dtype=object)
         output_modules = np.zeros(1, dtype=object)
+
+
 
         for i in range(self.M):
             input_modules[i] = PerceptronModule(weight_variable([784, self.tensor_size]),
