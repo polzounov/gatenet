@@ -16,12 +16,14 @@ class AdditionSublayerModule:
 class ConcatenationSublayerModule:
     def __init__(self, input_size, num_modules):
         self.input_size = input_size
-        self.output_size = input_size
+        self.output_size = input_size*num_modules
         self.num_modules = num_modules
 
     def processSublayerModule(self, module_tensors):
-        return np.sum(module_tensors) / self.num_modules
-
+        output = module_tensors[0]
+        for i in range(len(module_tensors)-1):
+            output = tf.concat([output, module_tensors[i+1]], axis=1)
+        return output
 
 
 
@@ -75,8 +77,7 @@ class Graph:
         input_size = self.tensor_size
         num_modules = self.M
         for i in range(self.L + 1):
-            self.sublayers[i] = Sublayer(input_size, num_modules, AdditionSublayerModule(input_size,num_modules))
-            input_size = self.sublayers[i].output_size
+            self.sublayers[i] = Sublayer(input_size, num_modules, ConcatenationSublayerModule(input_size,num_modules))
 
         ##################################################
         ## Define Modules
@@ -85,7 +86,7 @@ class Graph:
         gated_modules = np.zeros((self.L, self.M), dtype=object)
         output_modules = np.zeros(1, dtype=object)
 
-
+        print(self.sublayers[-1].output_size)
 
         for i in range(self.M):
             input_modules[i] = PerceptronModule(weight_variable([784, self.sublayers[0].input_size]),
@@ -105,7 +106,7 @@ class Graph:
         self.input_layer = InputLayer(input_modules)
         self.gated_layers = []
         for i in range(self.L):
-            gated_layer = GatedLayer(gated_modules[i], self.gamma)
+            gated_layer = GatedLayer(gated_modules[i], self.sublayers[i].output_size,  self.gamma)
             self.gated_layers.append(gated_layer)
 
         self.output_layer = OutputLayer(output_modules)
@@ -198,12 +199,12 @@ class InputLayer(Layer):
 
 
 class GatedLayer(Layer):
-    def __init__(self, modules, gamma=2.0):
+    def __init__(self, modules, input_size, gamma=2.0,  ):
         self.modules = modules
-
+        self.input_size = input_size
 
         ## CHANGE NUMBERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        self.gate_module = LinearModule(weight_variable([20, len(modules)]),
+        self.gate_module = LinearModule(weight_variable([self.input_size, len(modules)]),
                                               bias_variable([len(modules)]))
 
         self.gates = None
