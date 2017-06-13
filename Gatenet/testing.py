@@ -8,30 +8,9 @@ class Parameters:
         self.tensor_size = 20
         self.gamma = 2
         self.batch_size = 100
-        self.num_batches = 5000
+        self.num_batches = 200
         self.learning_rate = 0.001
         self.output_file = 'test'
-
-
-class Testing:
-    def __init__(self):
-        self.tests = None
-
-    def setupTests(self):
-        self.tests = []
-
-        # Define Test 1
-        test1 = Parameters()
-        test1.output_file = 'test1'
-        self.tests.append(test1)
-
-        '''
-        # Define Test 2
-        test2 = Parameters()
-        test2.gamma = 20
-        test2.output_file = 'test2'
-        self.tests.append(test2)
-        '''
 
 class OutputManager:
 
