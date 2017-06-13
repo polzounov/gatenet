@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
+
 import data_manager
 import pathnet
 import pprint as pp
@@ -34,13 +35,27 @@ def train():
   print('\n\n')
   y = pathnet.build_pathnet_graph(X, weights_dict, graph_structure)
 
+  '''
+    graph_structure.append((graph_io_sizes[(0,0)], pathnet.identity_module))
+    for i in range(Parameters.L): # Change indexing
+      for j in range(Parameters.M):
+          graph_structure.append((graph_io_sizes[(i,j)], pathnet.identity_module))
+  
+    graph_structure.append((graph_io_sizes[(Parameters.L, 0)], pathnet.identity_module))
+  '''
+
+  y, gates = build_pathnet_graph(x, weights_dict, graph_structure)
 
   # Cross Entropy
-  diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
-  cross_entropy = tf.reduce_mean(diff)
+  with tf.name_scope('cross_entropy'):
+    diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
+    with tf.name_scope('total'):
+      cross_entropy = tf.reduce_mean(diff)
+  tf.summary.scalar('cross_entropy', cross_entropy)
 
-  # GradientDescent
-  train_step = tf.train.AdamOptimizer().minimize(cross_entropy)
+  # GradientDescent 
+  with tf.name_scope('train'):
+    train_step = tf.train.GradientDescentOptimizer(Parameters.learning_rate).minimize(cross_entropy);
 
   # Accuracy 
   correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
