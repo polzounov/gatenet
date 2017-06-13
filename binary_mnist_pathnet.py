@@ -10,6 +10,8 @@ import numpy as np
 import time
 import tensorflow as tf
 
+from pathnet import *
+
 
 def train():
   # Import data
@@ -36,6 +38,41 @@ def train():
   graph_io_sizes = {}
   num_sublayers = 3
 
+  ############################################ New Code
+
+
+      # Hidden Layers
+  for i in range(Parameters.L):
+    for j in range(Parameters.M):
+      if (i == 0):
+        tensor_sizes['weights_' + str(i) + '_' + str(j)] = [28*28, 20]
+        tensor_sizes['gate_weights_' + str(i) + '_' + str(j)] = [28*28, 20]
+      else:
+        tensor_sizes['weights_' + str(i) + '_' + str(j)] = [20,20]
+        tensor_sizes['gate_weights_' + str(i) + '_' + str(j)] = [20,20]
+      tensor_sizes['biases_' + str(i) + '_' + str(j)] = [20]
+      tensor_sizes['gate_biases_' + str(i) + '_' + str(j)] = [20]
+
+    for s1 in range(num_sublayers):
+      for s2 in range(num_sublayers):
+        tensor_sizes['shape_shift_weights_' + str(i) + '_' + str(s1) + '_' + str(s2)] = [20,20]
+        tensor_sizes['shape_shift_biases_' + str(i) + '_' + str(s1) + '_' + str(s2)] = [20]
+
+
+
+      graph_structure = [[((2, 2), identity_module)],
+                         [((2, 2), identity_module), ((2, 2), identity_module), ((3, 3), identity_module)],
+                         [((2, 2), identity_module), ((2, 2), identity_module), ((3, 3), identity_module)],
+                         [((2, 2), identity_module), ((3, 3), identity_module), ((4, 4), identity_module)],
+                         [((2, 2), identity_module), ((2, 2), identity_module), ((3, 3), identity_module)],
+                         [((2, 2), identity_module)]
+                         ]
+
+  ############################################
+
+
+
+
       # Hidden Layers
   for i in range(Parameters.L):
     for j in range(Parameters.M):
@@ -52,31 +89,16 @@ def train():
                 = pathnet.bias_variable(
                 tensor_sizes['shape_shift_biases_' + str(i) + '_' + str(s1) + '_' + str(s2)])
 
+  '''
+    graph_structure.append((graph_io_sizes[(0,0)], pathnet.identity_module))
+    for i in range(Parameters.L): # Change indexing
+      for j in range(Parameters.M):
+          graph_structure.append((graph_io_sizes[(i,j)], pathnet.identity_module))
+  
+    graph_structure.append((graph_io_sizes[(Parameters.L, 0)], pathnet.identity_module))
+  '''
 
-  graph_structure.append((graph_io_sizes[(0,0)], pathnet.identity_module))
-  for i in range(Parameters.L): # Change indexing
-    for j in range(Parameters.M):
-        graph_structure.append((graph_io_sizes[(i,j)], pathnet.identity_module))
-
-  graph_structure.append((graph_io_sizes[(Parameters.L, 0)], pathnet.identity_module))
-
-
-
-  for i in range(Parameters.L):
-    layer_modules_list = np.zeros(Parameters.M, dtype=object);
-    for j in range(Parameters.M):
-      if (i == 0):
-        layer_modules_list[j] = pathnet.module(x, weights_list[i, j], biases_list[i, j],
-                                               'layer' + str(i + 1) + "_" + str(j + 1))  # *geopath[i,j];
-      else:
-        layer_modules_list[j] = pathnet.module2(j, net, weights_list[i, j], biases_list[i, j],
-                                                'layer' + str(i + 1) + "_" + str(j + 1))  # *geopath[i,j];
-    net = np.sum(layer_modules_list) / Parameters.M;
-
-
-  output_weights = pathnet.module_weight_variable([Parameters.filt, 2]);
-  output_biases = pathnet.module_bias_variable([2]);
-  y = pathnet.nn_layer(net, output_weights, output_biases, 'output_layer');
+  y, gates = build_pathnet_graph(x, weights_dict, graph_structure)
 
   # Cross Entropy
   with tf.name_scope('cross_entropy'):
@@ -85,16 +107,9 @@ def train():
       cross_entropy = tf.reduce_mean(diff)
   tf.summary.scalar('cross_entropy', cross_entropy)
 
-  # Need to learn variables
-  var_list_to_learn = [] + output_weights + output_biases;
-  for i in range(Parameters.L):
-    for j in range(Parameters.M):
-      var_list_to_learn += weights_list[i, j] + biases_list[i, j];
-
   # GradientDescent 
   with tf.name_scope('train'):
-    train_step = tf.train.GradientDescentOptimizer(Parameters.learning_rate).minimize(cross_entropy,
-                                                                                 var_list=var_list_to_learn);
+    train_step = tf.train.GradientDescentOptimizer(Parameters.learning_rate).minimize(cross_entropy);
 
   # Accuracy 
   with tf.name_scope('accuracy'):
