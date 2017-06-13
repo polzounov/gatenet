@@ -2,6 +2,11 @@
 .idea/
 Gatenet/.idea
 
+# Logs / outputs / etc
+logs/
+Gatenet/logs/
+Gatenet/output/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
