@@ -4,6 +4,46 @@ import numpy as np
 from tensorflow_utils import *
 
 
+class AdditionSublayerModule:
+    def __init__(self, input_size, num_modules):
+        self.input_size = input_size
+        self.output_size = input_size
+        self.num_modules = num_modules
+
+    def processSublayerModule(self, module_tensors):
+        return np.sum(module_tensors) / self.num_modules
+
+class ConcatenationSublayerModule:
+    def __init__(self, input_size, num_modules):
+        self.input_size = input_size
+        self.output_size = input_size
+        self.num_modules = num_modules
+
+    def processSublayerModule(self, module_tensors):
+        return np.sum(module_tensors) / self.num_modules
+
+
+
+
+######################################################################
+## Code for Sublayer
+
+class Sublayer:
+
+    def __init__(self, input_size, num_modules, sublayer_module):
+        self.input_size = input_size
+        self.sublayer_module = sublayer_module
+        self.num_modules = num_modules
+        self.output_size = self.sublayer_module.output_size
+
+    def processSublayer(self, module_tensors):
+        return self.sublayer_module.processSublayerModule(module_tensors)
+
+
+######################################################################
+
+
+
 ######################################################################
 ## Code for Graph construction
 
@@ -13,6 +53,7 @@ class Graph:
         self.input_layer = None
         self.gated_layers = None
         self.output_layer = None
+        self.sublayers = None
         
     ## Build graph to test code
     def buildTestGraph(self, input_images, parameter_dict):
@@ -25,7 +66,18 @@ class Graph:
         self.gamma = parameter_dict['gamma']
 
         ##################################################
-        
+
+
+        ##################################################
+        ## Define Sublayers
+
+        self.sublayers = np.zeros(self.L + 1, dtype= object)
+        input_size = self.tensor_size
+        num_modules = self.M
+        for i in range(self.L + 1):
+            self.sublayers[i] = Sublayer(input_size, num_modules, AdditionSublayerModule(input_size,num_modules))
+            input_size = self.sublayers[i].output_size
+
         ##################################################
         ## Define Modules
         
@@ -33,14 +85,16 @@ class Graph:
         gated_modules = np.zeros((self.L, self.M), dtype=object)
         output_modules = np.zeros(1, dtype=object)
 
+
+
         for i in range(self.M):
-            input_modules[i] = PerceptronModule(weight_variable([784, self.tensor_size]),
-                                                bias_variable([self.tensor_size]), activation=tf.nn.relu)
+            input_modules[i] = PerceptronModule(weight_variable([784, self.sublayers[0].input_size]),
+                                                bias_variable([self.sublayers[0].input_size]), activation=tf.nn.relu)
             
             for j in range(self.L):
-                gated_modules[j][i] = PerceptronModule(weight_variable([self.tensor_size, self.tensor_size]),
-                                                       bias_variable([self.tensor_size]), activation=tf.nn.relu)
-        output_modules[0] = LinearModule(weight_variable([self.tensor_size, 10]), bias_variable([10]))
+                gated_modules[j][i] = PerceptronModule(weight_variable([self.sublayers[j].output_size, self.sublayers[j+1].input_size]),
+                                                       bias_variable([self.sublayers[j+1].input_size]), activation=tf.nn.relu)
+        output_modules[0] = LinearModule(weight_variable([self.sublayers[-1].output_size, 10]), bias_variable([10]))
 
         ##################################################
         
@@ -62,10 +116,12 @@ class Graph:
         ##################################################
         ## Construct graph
         layer_output = self.input_layer.processLayer(input_images)
+        sublayer_output = self.sublayers[0].processSublayer(layer_output)
         for i in range(self.L):
-            layer_output = self.gated_layers[i].processLayer(layer_output)
+            layer_output = self.gated_layers[i].processLayer(sublayer_output)
+            sublayer_output = self.sublayers[i+1].processSublayer(layer_output)
 
-        logits = self.output_layer.processLayer(layer_output)
+        logits = self.output_layer.processLayer(sublayer_output)
         ##################################################
 
         return logits
@@ -137,7 +193,7 @@ class InputLayer(Layer):
         output_tensors = np.zeros(len(self.modules),dtype=object)
         for i in range(len(self.modules)):
             output_tensors[i] = self.modules[i].processModule(input_tensors)
-        return np.sum(output_tensors) / len(self.modules)
+        return output_tensors
 
 
 
@@ -181,7 +237,7 @@ class GatedLayer(Layer):
             gates_tiled = tf.tile(gg, [1,num_cols])
             output_tensors[i] = tf.multiply(output_tensors[i], gates_tiled)
 
-        return np.sum(output_tensors) / len(self.modules)
+        return output_tensors
 
 class OutputLayer(Layer):
     def __init__(self, modules):
