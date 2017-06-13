@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 #from parameters import Parameters
-from Gatenet.tensorflow_utils import *
+from tensorflow_utils import *
 
 
 ######################################################################
@@ -15,33 +15,32 @@ class Graph:
         self.output_layer = None
         
     ## Build graph to test code
-    def buildTestGraph(self, input_images):
+    def buildTestGraph(self, input_images, parameter_dict):
 
         ##################################################
         ## Define Hyperparameters
-        self.M = 10
-        self.L = 3
-        tensor_size = 20
+        self.M = parameter_dict['M']
+        self.L = parameter_dict['L']
+        self.tensor_size = parameter_dict['tensor_size']
+        self.gamma = parameter_dict['gamma']
 
-        M = self.M
-        L = self.L
         ##################################################
         
         ##################################################
         ## Define Modules
         
-        input_modules = np.zeros(M, dtype=object)
-        gated_modules = np.zeros((L, M), dtype=object)
+        input_modules = np.zeros(self.M, dtype=object)
+        gated_modules = np.zeros((self.L, self.M), dtype=object)
         output_modules = np.zeros(1, dtype=object)
 
-        for i in range(M):
-            input_modules[i] = PerceptronModule(weight_variable([784, tensor_size]),
-                                                bias_variable([tensor_size]), activation=tf.nn.relu)
+        for i in range(self.M):
+            input_modules[i] = PerceptronModule(weight_variable([784, self.tensor_size]),
+                                                bias_variable([self.tensor_size]), activation=tf.nn.relu)
             
-            for j in range(L):
-                gated_modules[j][i] = PerceptronModule(weight_variable([tensor_size, tensor_size]),
-                                                       bias_variable([tensor_size]), activation=tf.nn.relu)
-        output_modules[0] = LinearModule(weight_variable([tensor_size, 10]), bias_variable([10]))
+            for j in range(self.L):
+                gated_modules[j][i] = PerceptronModule(weight_variable([self.tensor_size, self.tensor_size]),
+                                                       bias_variable([self.tensor_size]), activation=tf.nn.relu)
+        output_modules[0] = LinearModule(weight_variable([self.tensor_size, 10]), bias_variable([10]))
 
         ##################################################
         
@@ -51,8 +50,8 @@ class Graph:
 
         self.input_layer = InputLayer(input_modules)
         self.gated_layers = []
-        for i in range(L):
-            gated_layer = GatedLayer(gated_modules[i])
+        for i in range(self.L):
+            gated_layer = GatedLayer(gated_modules[i], self.gamma)
             self.gated_layers.append(gated_layer)
 
         self.output_layer = OutputLayer(output_modules)
@@ -63,7 +62,7 @@ class Graph:
         ##################################################
         ## Construct graph
         layer_output = self.input_layer.processLayer(input_images)
-        for i in range(L):
+        for i in range(self.L):
             layer_output = self.gated_layers[i].processLayer(layer_output)
 
         logits = self.output_layer.processLayer(layer_output)
@@ -143,15 +142,16 @@ class InputLayer(Layer):
 
 
 class GatedLayer(Layer):
-    def __init__(self, modules):
+    def __init__(self, modules, gamma=2.0):
         self.modules = modules
+
 
         ## CHANGE NUMBERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.gate_module = LinearModule(weight_variable([20, len(modules)]),
                                               bias_variable([len(modules)]))
 
         self.gates = None
-        self.gamma = 2 #1.333
+        self.gamma = gamma
 
     def computeGates(self, input_tensors):
         gates_unnormalized = self.gate_module.processModule(input_tensors)
