@@ -78,8 +78,9 @@ def train():
       # Compute gate vectors
       for i in range(len(tr_label)):
         image = np.reshape(tr_data[i,:], (1, 28 * 28))
+        output_image = np.reshape(image,(28,28))
         gates = graph.determineGates(image, x, sess)
-        outputManager.addData(gates, np.argmax(tr_label[i]) )
+        outputManager.addData(gates, np.argmax(tr_label[i]), output_image)
 
 
       # Save gate vectors to file

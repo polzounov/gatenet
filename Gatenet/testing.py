@@ -8,7 +8,7 @@ class Parameters:
         self.tensor_size = 20
         self.gamma = 2
         self.batch_size = 100
-        self.num_batches = 10000
+        self.num_batches = 5000
         self.learning_rate = 0.001
         self.output_file = 'test'
 
@@ -25,12 +25,13 @@ class Testing:
         test1.output_file = 'test1'
         self.tests.append(test1)
 
+        '''
         # Define Test 2
         test2 = Parameters()
         test2.gamma = 20
         test2.output_file = 'test2'
         self.tests.append(test2)
-
+        '''
 
 class OutputManager:
 
@@ -39,19 +40,22 @@ class OutputManager:
         self.parameter_dict = None
         self.data = None
         self.labels = None
+        self.images = None
 
 
     def initialize(self, parameter_dict):
         self.parameter_dict = parameter_dict
         self.data = []
         self.labels = []
+        self.images = []
 
-    def addData(self, data, label):
+    def addData(self, data, label, image):
         self.data.append(data)
         self.labels.append(label)
+        self.images.append(image)
 
     def save(self):
-        output = (self.data, self.labels, self.parameter_dict)
+        output = (self.data, self.labels, self.images, self.parameter_dict)
         with open('output/' + self.parameter_dict['output_file'] + '.pkl', 'wb') as f:
             pickle.dump(output, f , pickle.HIGHEST_PROTOCOL)
 
