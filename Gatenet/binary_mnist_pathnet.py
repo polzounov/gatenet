@@ -31,6 +31,7 @@ def train(parameter_dict=None, skip_digit=8, num_gate_vectors_output=100):
 
   # Cross Entropy
   diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
+  predictions = tf.nn.softmax(y)
   cross_entropy = tf.reduce_mean(diff)
 
   # GradientDescent
@@ -75,23 +76,22 @@ def train(parameter_dict=None, skip_digit=8, num_gate_vectors_output=100):
   outputManager.save()
   
 
-  ''' Need to have run predictions function for this
   # Save outputs of the final output layer (softmax)
-  param_dict2 = parameter_dict.copy()
-  param_dict2['output_file'] = 'softmax_outputs'
-  # Initialize output manager to save gating data
-  outputManager = outputManager()
-  outputManager.initialize(parameter_dict)
-  # Compute gate vectors
+  predictions_param_dict = parameter_dict.copy()
+  predictions_param_dict['output_file'] = 'softmax_outputs'
+
+  predictions_output_manager = OutputManager()
+  predictions_output_manager.initialize(predictions_param_dict)
+  # Compute predictions
   for i in range(len(tr_label)):
     image = np.reshape(tr_data[i,:], (1, 28 * 28))
-    pred = 
-    gates = graph.determineGates(image, x, sess)
-    outputManager.addData(gates, np.argmax(tr_label[i]), output_image)
+    output_image = np.reshape(image, (28, 28))
+    pred = sess.run(predictions, feed_dict={x: image})
+    predictions_output_manager.addData(pred, np.argmax(tr_label[i]), output_image)
 
   # Save gate vectors to file
-  outputManager.save()
-  '''
+  predictions_output_manager.save()
+
 
 def main(_):
   train(skip_digit=8, num_gate_vectors_output=1000)
