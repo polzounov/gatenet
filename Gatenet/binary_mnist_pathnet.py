@@ -10,7 +10,7 @@ from testing import *
 from tensorflow.examples.tutorials.mnist import input_data
 
 
-def train(parameter_dict=None, skip_digit=8, num_gate_vectors_output=100):
+def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   if parameter_dict is None:
     print('Use test params')
     parameter_dict = Parameters().__dict__
@@ -44,11 +44,17 @@ def train(parameter_dict=None, skip_digit=8, num_gate_vectors_output=100):
   # Initialize Variables
   tf.global_variables_initializer().run()
 
-  skip_digit = 8 # Skip over this digits in training
-
   for i in range(parameter_dict['num_batches']):
     tr_data, tr_label = mnist.train.next_batch(parameter_dict['batch_size'])
-    elems = np.where(np.argmax(tr_label, axis=1) != skip_digit)[0]
+
+    # Get the indices of elements in skip list
+    elems_list = []
+    for skip_digit in skip_digits:
+      elems = (np.where(np.argmax(tr_label, axis=1) == skip_digit)[0])
+      elems_list.append(elems)
+    elems = np.sort(np.concatenate(elems_list, axis=0))
+    elems = np.delete(np.arange(tr_label.shape[0]), elems) # Invert elems
+
     tr_data = tr_data[elems,:]
     tr_label = tr_label[elems,:]
 
@@ -94,7 +100,7 @@ def train(parameter_dict=None, skip_digit=8, num_gate_vectors_output=100):
 
 
 def main(_):
-  train(skip_digit=8, num_gate_vectors_output=1000)
+  train(skip_digits=[8], num_gate_vectors_output=2500)
 
 
 if __name__ == '__main__':
