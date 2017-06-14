@@ -82,9 +82,25 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   outputManager.save()
   
 
+  # Save outputs of the final pre-softmax layer (features)
+  features_param_dict = parameter_dict.copy()
+  features_param_dict['output_file'] = features_param_dict['output_file']+'__feature_layer_outputs'
+
+  features_output_manager = OutputManager()
+  features_output_manager.initialize(features_param_dict)
+  # Compute the features (y)
+  for i in range(len(tr_label)):
+    image = np.reshape(tr_data[i,:], (1, 28 * 28))
+    output_image = np.reshape(image, (28, 28))
+    pred = sess.run(y, feed_dict={x: image})
+    features_output_manager.addData(pred, np.argmax(tr_label[i]), output_image)
+  # Save feature vectors to file
+  features_output_manager.save()
+
+
   # Save outputs of the final output layer (softmax)
   predictions_param_dict = parameter_dict.copy()
-  predictions_param_dict['output_file'] = 'softmax_outputs'
+  predictions_param_dict['output_file'] = predictions_param_dict['output_file']+'__softmax_outputs'
 
   predictions_output_manager = OutputManager()
   predictions_output_manager.initialize(predictions_param_dict)
@@ -94,13 +110,12 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
     output_image = np.reshape(image, (28, 28))
     pred = sess.run(predictions, feed_dict={x: image})
     predictions_output_manager.addData(pred, np.argmax(tr_label[i]), output_image)
-
-  # Save gate vectors to file
+  # Save softmax output vectors to file
   predictions_output_manager.save()
 
 
 def main(_):
-  train(skip_digits=[8], num_gate_vectors_output=2500)
+  train(skip_digits=[8], num_gate_vectors_output=1000)
 
 
 if __name__ == '__main__':
