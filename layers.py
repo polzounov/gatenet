@@ -55,8 +55,7 @@ class Graph:
     ## Build graph to test code
     def buildTestGraph(self, input_images, parameter_dict):
 
-        ##################################################
-        ## Define Hyperparameters
+        ## Define Hyperparameters ########################
         self.M = parameter_dict['M']
         self.L = parameter_dict['L']
         self.tensor_size = parameter_dict['tensor_size']
@@ -64,16 +63,16 @@ class Graph:
         ##################################################
 
 
-        ##################################################
-        ## Define Sublayers
+        ## Define Sublayers ##############################
         self.sublayers = np.zeros(self.L + 1, dtype= object)
         input_size = self.tensor_size
         num_modules = self.M
         for i in range(self.L + 1):
             self.sublayers[i] = Sublayer(input_size, num_modules, ConcatenationSublayerModule(input_size,num_modules))
-
         ##################################################
-        ## Define Modules        
+
+
+        ## Define Modules ################################
         input_modules = np.zeros(self.M, dtype=object)
         gated_modules = np.zeros((self.L, self.M), dtype=object)
         output_modules = np.zeros(1, dtype=object)
@@ -89,10 +88,9 @@ class Graph:
                                                        bias_variable([self.sublayers[j+1].input_size]), activation=tf.nn.relu)
         output_modules[0] = LinearModule(weight_variable([self.sublayers[-1].output_size, 10]), bias_variable([10]))
         ##################################################
-        
 
-        ##################################################
-        ## Define Layers
+
+        ## Define Layers #################################
         self.input_layer = InputLayer(input_modules)
         self.gated_layers = []
         for i in range(self.L):
@@ -103,8 +101,7 @@ class Graph:
         ##################################################
 
 
-        ##################################################
-        ## Construct graph
+        ## Construct graph ###############################
         layer_output = self.input_layer.processLayer(input_images)
         sublayer_output = self.sublayers[0].processSublayer(layer_output)
         for i in range(self.L):
