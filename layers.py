@@ -13,6 +13,7 @@ class AdditionSublayerModule:
     def processSublayerModule(self, module_tensors):
         return np.sum(module_tensors) / self.num_modules
 
+
 class ConcatenationSublayerModule:
     def __init__(self, input_size, num_modules):
         self.input_size = input_size
@@ -26,10 +27,8 @@ class ConcatenationSublayerModule:
         return output
 
 
-
 ######################################################################
 ## Code for Sublayer
-
 class Sublayer:
 
     def __init__(self, input_size, num_modules, sublayer_module):
@@ -40,15 +39,11 @@ class Sublayer:
 
     def processSublayer(self, module_tensors):
         return self.sublayer_module.processSublayerModule(module_tensors)
-
-
 ######################################################################
-
 
 
 ######################################################################
 ## Code for Graph construction
-
 class Graph:
 
     def __init__(self):
@@ -66,13 +61,11 @@ class Graph:
         self.L = parameter_dict['L']
         self.tensor_size = parameter_dict['tensor_size']
         self.gamma = parameter_dict['gamma']
-
         ##################################################
 
 
         ##################################################
         ## Define Sublayers
-
         self.sublayers = np.zeros(self.L + 1, dtype= object)
         input_size = self.tensor_size
         num_modules = self.M
@@ -80,8 +73,7 @@ class Graph:
             self.sublayers[i] = Sublayer(input_size, num_modules, ConcatenationSublayerModule(input_size,num_modules))
 
         ##################################################
-        ## Define Modules
-        
+        ## Define Modules        
         input_modules = np.zeros(self.M, dtype=object)
         gated_modules = np.zeros((self.L, self.M), dtype=object)
         output_modules = np.zeros(1, dtype=object)
@@ -96,13 +88,11 @@ class Graph:
                 gated_modules[j][i] = PerceptronModule(weight_variable([self.sublayers[j].output_size, self.sublayers[j+1].input_size]),
                                                        bias_variable([self.sublayers[j+1].input_size]), activation=tf.nn.relu)
         output_modules[0] = LinearModule(weight_variable([self.sublayers[-1].output_size, 10]), bias_variable([10]))
-
         ##################################################
         
 
         ##################################################
         ## Define Layers
-
         self.input_layer = InputLayer(input_modules)
         self.gated_layers = []
         for i in range(self.L):
@@ -110,7 +100,6 @@ class Graph:
             self.gated_layers.append(gated_layer)
 
         self.output_layer = OutputLayer(output_modules)
-
         ##################################################
 
 
@@ -124,7 +113,6 @@ class Graph:
 
         logits = self.output_layer.processLayer(sublayer_output)
         ##################################################
-
         return logits
 
 
@@ -135,14 +123,11 @@ class Graph:
                          feed_dict={x:image})
             gates[i] = np.array(g)
         return gates
-
-
 ######################################################################
 
 
 ######################################################################
 ## Code for Modules
-
 class Module:
     def processModule(self, inputTensor):
         pass
@@ -176,13 +161,11 @@ class LinearModule(Module):
 
     def processModule(self, input_tensor):
         return tf.matmul(input_tensor, self.weights) + self.biases
-
 ######################################################################
 
 
 ######################################################################
 ## Code for Layers
-
 class Layer:
     pass
 
@@ -195,7 +178,6 @@ class InputLayer(Layer):
         for i in range(len(self.modules)):
             output_tensors[i] = self.modules[i].processModule(input_tensors)
         return output_tensors
-
 
 
 class GatedLayer(Layer):
@@ -240,6 +222,7 @@ class GatedLayer(Layer):
 
         return output_tensors
 
+
 class OutputLayer(Layer):
     def __init__(self, modules):
         self.modules = modules
@@ -249,5 +232,4 @@ class OutputLayer(Layer):
         for i in range(len(self.modules)):
             output_tensors[i] = self.modules[i].processModule(input_tensors)
         return np.sum(output_tensors)/len(self.modules)
-
 ######################################################################
