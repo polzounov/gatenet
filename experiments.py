@@ -1,4 +1,4 @@
-from binary_mnist_pathnet import *
+from mnist import *
 
 
 def train_gate_network(parameter_dict, input_data, input_labels, test_data, test_labels, sess, use_gates=1):
