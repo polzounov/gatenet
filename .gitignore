@@ -6,6 +6,8 @@ Gatenet/.idea
 logs/
 MNIST_data/
 output/
+images/
+omni/
 old_code/logs/
 old_code/output/
 gates.txt.npy
