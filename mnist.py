@@ -51,7 +51,6 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   for i in range(parameter_dict['num_batches']):
     tr_data, tr_label = mnist.train.next_batch(parameter_dict['batch_size'])
 
-
     # Get the indices of elements in skip list
     elems_list = []
     for skip_digit in skip_digits:
@@ -60,23 +59,18 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
     elems = np.sort(np.concatenate(elems_list, axis=0))
     elems = np.delete(np.arange(tr_label.shape[0]), elems) # Invert elems
 
-    
     tr_data = tr_data[elems,:]
     tr_label = tr_label[elems,:]
-
 
     if len(tr_data) < 50:
       continue
 
-    if i % 100 == 0:
+    if i % 10 == 0:
       acc = sess.run(accuracy, feed_dict={x: tr_data, y_: tr_label})
       print('training %d, accuracy %g' % (i, acc))
 
     acc = sess.run(accuracy, feed_dict={x: tr_data, y_: tr_label})
-    #if acc > 0.8:
-    #  break
     sess.run(train_step, feed_dict={x: tr_data, y_: tr_label})
-
 
   tr_data, tr_label = mnist.train.next_batch(num_gate_vectors_output)
 
@@ -126,8 +120,35 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   predictions_output_manager.save()
 
 
+  print('Starting test')
+
 
   tr_data, tr_label = mnist.train.next_batch(num_gate_vectors_output)
+  # Get the indices of elements in skip list
+  skip_digits_test = np.delete([0,1,2,3,4,5,6,7,8,9], skip_digits)
+  elems_list = []
+  for skip_digit in skip_digits_test:
+    elems = (np.where(np.argmax(tr_label, axis=1) == skip_digit)[0])
+    elems_list.append(elems)
+  elems = np.sort(np.concatenate(elems_list, axis=0))
+  elems = np.delete(np.arange(tr_label.shape[0]), elems)  # Invert elems
+  tr_data = tr_data[elems, :]
+  tr_label = tr_label[elems, :]
+
+  test_images1, test_labels1 = test_images, test_labels
+  # Get the indices of elements in skip list
+  skip_digits_test = np.delete([0,1,2,3,4,5,6,7,8,9], skip_digits)
+  elems_list = []
+  for skip_digit in skip_digits_test:
+    elems = (np.where(np.argmax(test_labels, axis=1) == skip_digit)[0])
+    elems_list.append(elems)
+  elems = np.sort(np.concatenate(elems_list, axis=0))
+  elems = np.delete(np.arange(test_labels.shape[0]), elems)  # Invert elems
+  test_images = test_images[elems, :]
+  test_labels = test_labels[elems, :]
+
+
+
   gates_train = np.zeros((len(tr_data), parameter_dict['L'] * parameter_dict['M']))
   for i in range(len(tr_label)):
     image = np.reshape(tr_data[i, :], (1, 28 * 28))
@@ -141,7 +162,12 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
     gates = graph.determineGates(image, x, sess)
     gates_test[i] = np.reshape(gates, (parameter_dict['L'] * parameter_dict['M']))
 
+
+
+  # mini NN
+
   image_test_accuracy = sess.run(accuracy, feed_dict={x: test_images, y_: test_labels})
+  image_test_accuracy1 = sess.run(accuracy, feed_dict={x: test_images1, y_: test_labels1})
 
 
 
@@ -160,13 +186,14 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   gate_test_accuracy = train_gate_network(parameter_dict, gates_train, tr_label, gates_test, test_labels, sess)
 
   print('classification accuracy from neural network with image inputs %g' %(image_test_accuracy))
+  print('classification accuracy from neural network 1! with image inputs %g' %(image_test_accuracy1))
   print('classiciation accuracy from knn with gate vectors %g' %(knn_gate_accuracy))
   print('classification accuracy from neural network with gate vector inputs %g' % (gate_test_accuracy))
 
 
 
 def main(_):
-  train(skip_digits=[8], num_gate_vectors_output=1000)
+  train(skip_digits=[0,1,2], num_gate_vectors_output=1000)
 
 
 if __name__ == '__main__':

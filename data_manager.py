@@ -11,6 +11,8 @@ def get_next_batch():
 
     total_tr_data, total_tr_label = mnist.train.next_batch(mnist.train._num_examples);
 
+    return total_tr_data, total_tr_label
+
     # Gathering a1 Data
     tr_data_a1 = total_tr_data[(total_tr_label[:, Parameters.a1] == 1.0)];
     tr_data_a2 = total_tr_data[(total_tr_label[:, Parameters.a2] == 1.0)];

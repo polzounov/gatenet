@@ -4,8 +4,11 @@ Gatenet/.idea
 
 # Logs / outputs / etc
 logs/
-Gatenet/logs/
-Gatenet/output/
+MNIST_data/
+output/
+old_code/logs/
+old_code/output/
+gates.txt.npy
 
 # Mac
 *.DS_Store
@@ -14,6 +17,7 @@ Gatenet/output/
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
