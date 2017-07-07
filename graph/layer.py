@@ -33,17 +33,6 @@ class Layer():
         self.layer_output_size = self.sublayer.output_size
 
 
-class InputLayer(Layer):
-    def __init__(self, layer_definition):
-        super(InputLayer, self).__init__(layer_definition)
-
-    def process_layer(self, input_tensors):
-        output_tensors = np.zeros(len(self.modules),dtype=object)
-        for i in range(len(self.modules)):
-            output_tensors[i] = self.modules[i].process_module(input_tensors)
-        return self.sublayer.process_sublayer(output_tensors)
-
-
 class GatedLayer(Layer):
     def __init__(self, layer_definition, gamma=2.0):
         super(GatedLayer, self).__init__(layer_definition)
@@ -77,16 +66,5 @@ class GatedLayer(Layer):
             gates_tiled = tf.tile(gg, [1,num_cols])
             output_tensors[i] = tf.multiply(output_tensors[i], gates_tiled)
 
-        return self.sublayer.process_sublayer(output_tensors)
-
-
-class OutputLayer(Layer):
-    def __init__(self, layer_definition):
-        super(OutputLayer, self).__init__(layer_definition)
-
-    def process_layer(self, input_tensors):
-        output_tensors = np.zeros(len(self.modules), dtype=object)
-        for i in range(len(self.modules)):
-            output_tensors[i] = self.modules[i].process_module(input_tensors)
         return self.sublayer.process_sublayer(output_tensors)
 ######################################################################
