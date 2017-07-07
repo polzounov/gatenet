@@ -32,9 +32,10 @@ class ResidualPerceptronModule(Module):
 
 class LinearModule(Module):
 
-    def __init__(self, weights, biases):
+    def __init__(self, weights, biases, activation=None):
         self.weights = weights
         self.biases = biases
+        # Don't use the activation if it is given
 
     def processModule(self, input_tensor):
         return tf.matmul(input_tensor, self.weights) + self.biases
