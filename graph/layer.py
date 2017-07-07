@@ -32,7 +32,7 @@ class InputLayer(Layer):
     def process_layer(self, input_tensors):
         output_tensors = np.zeros(len(self.modules),dtype=object)
         for i in range(len(self.modules)):
-            output_tensors[i] = self.modules[i].processModule(input_tensors)
+            output_tensors[i] = self.modules[i].process_module(input_tensors)
         return output_tensors
 
 
@@ -45,7 +45,7 @@ class GatedLayer(Layer):
         self.gamma = gamma
 
     def compute_gates(self, input_tensors):
-        gates_unnormalized = self.gate_module.processModule(input_tensors)
+        gates_unnormalized = self.gate_module.process_module(input_tensors)
         gates_pow = tf.pow(gates_unnormalized, self.gamma)
 
         gg = tf.reshape(tf.reduce_sum(gates_pow, axis = 1), [-1,1])
@@ -62,7 +62,7 @@ class GatedLayer(Layer):
 
         for i in range(len(self.modules)):
             # Get the number of rows in the fed value at run-time.
-            output_tensors[i] = self.modules[i].processModule(input_tensors)
+            output_tensors[i] = self.modules[i].process_module(input_tensors)
             num_cols =  np.int32(output_tensors[i].get_shape()[1])
 
             gg = tf.reshape(gates[:,i], [-1,1])
@@ -79,6 +79,6 @@ class OutputLayer():
     def process_layer(self, input_tensors):
         output_tensors = np.zeros(len(self.modules), dtype=object)
         for i in range(len(self.modules)):
-            output_tensors[i] = self.modules[i].processModule(input_tensors)
+            output_tensors[i] = self.modules[i].process_module(input_tensors)
         return np.sum(output_tensors)/len(self.modules)
 ######################################################################
