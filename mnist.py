@@ -32,7 +32,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
 
   # Build computation graph
   graph = Graph()
-  y = graph.buildTestGraph(x, parameter_dict)
+  y = graph.build_graph(x, parameter_dict)
 
   # Cross Entropy
   diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
@@ -83,7 +83,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   for i in range(len(tr_label)):
     image = np.reshape(tr_data[i,:], (1, 28 * 28))
     output_image = np.reshape(image,(28,28))
-    gates = graph.determineGates(image, x, sess)
+    gates = graph.determine_gates(image, x, sess)
     outputManager.addData(gates, np.argmax(tr_label[i]), output_image)
   # Save to file
   outputManager.save()
@@ -120,7 +120,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   # Save softmax output vectors to file
   predictions_output_manager.save()
 
-
+  '''
   print('Starting test')
 
 
@@ -153,14 +153,14 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   gates_train = np.zeros((len(tr_data), parameter_dict['L'] * parameter_dict['M']))
   for i in range(len(tr_label)):
     image = np.reshape(tr_data[i, :], (1, 28 * 28))
-    gates = graph.determineGates(image, x, sess)
+    gates = graph.determine_gates(image, x, sess)
     gates_train[i] = np.reshape(gates, (parameter_dict['L'] * parameter_dict['M']))
 
   # Determine accuracy of regular image input network and gate input network on test data
   gates_test = np.zeros((len(test_images), parameter_dict['L'] * parameter_dict['M']))
   for i in range(len(test_labels)):
     image = np.reshape(test_images[i, :], (1, 28 * 28))
-    gates = graph.determineGates(image, x, sess)
+    gates = graph.determine_gates(image, x, sess)
     gates_test[i] = np.reshape(gates, (parameter_dict['L'] * parameter_dict['M']))
 
 
@@ -190,7 +190,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   print('classification accuracy from neural network 1! with image inputs %g' %(image_test_accuracy1))
   print('classiciation accuracy from knn with gate vectors %g' %(knn_gate_accuracy))
   print('classification accuracy from neural network with gate vector inputs %g' % (gate_test_accuracy))
-
+  '''
 
 
 def main(_):
