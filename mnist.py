@@ -31,8 +31,8 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   y_ = tf.placeholder(tf.float32, [None, 10], name='y-input')
 
   # Build computation graph
-  graph = Graph()
-  y = graph.build_graph(x, parameter_dict)
+  graph = Graph(parameter_dict)
+  y = graph.return_logits(x)
 
   # Cross Entropy
   diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
