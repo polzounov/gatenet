@@ -38,30 +38,31 @@ class Graph():
         for i in range(self.L + 1):
             self.sublayers[i] = ConcatenationSublayerModule(input_size,num_modules)
         
-        ## Define Modules #################################################################
-        input_modules = np.zeros(self.M, dtype=object)
-        gated_modules = np.zeros((self.L, self.M), dtype=object)
-        output_modules = np.zeros(1, dtype=object)
-        print(self.sublayers[-1].output_size)
 
-        for i in range(self.M):
-            input_modules[i] = PerceptronModule(weight_variable([784, self.sublayers[0].input_size]),
-                                                bias_variable([self.sublayers[0].input_size]), activation=tf.nn.relu)
-            for j in range(self.L):
-                gated_modules[j][i] = PerceptronModule(weight_variable([self.sublayers[j].output_size, self.sublayers[j+1].input_size]),
-                                                       bias_variable([self.sublayers[j+1].input_size]), activation=tf.nn.relu)
+
+        ## Define Modules #################################################################
+        output_modules = np.zeros(1, dtype=object)
         output_modules[0] = LinearModule(weight_variable([self.sublayers[-1].output_size, 10]), 
                                          bias_variable([10]))
+        ##################################################################################
 
-        ## Define Layers ##################################################################
-        self.input_layer = InputLayer(input_modules)
+        ## Define Layers #################################################################
+        input_layer_defn = {'M': self.M,
+                            'input_size': 784, 
+                            'output_size': self.sublayers[0].input_size,
+                            'module_type': PerceptronModule}
+        self.input_layer = InputLayer(input_layer_defn)
+
         self.gated_layers = []
         for i in range(self.L):
-            gated_layer = GatedLayer(gated_modules[i], self.sublayers[i].output_size,  self.gamma)
+            gated_layer_defn = {'M': self.M,
+                                'input_size': self.sublayers[i].output_size, 
+                                'output_size': self.sublayers[i+1].input_size,
+                                'module_type': PerceptronModule}
+            gated_layer = GatedLayer(gated_layer_defn, self.gamma)
             self.gated_layers.append(gated_layer)
 
         self.output_layer = OutputLayer(output_modules)
-        ##################################################################################
 
 
     ## Build graph to test code
@@ -96,7 +97,10 @@ class Graph():
     GRAPH API DOCUMENTATION:
         • Takes in:
             -  
-    
+
+    SUBLAYER API DOC:
+        • Takes in:
+            - Number of modules
 
     LAYER API DOCUMENTATION:
         • Takes in:
@@ -106,9 +110,7 @@ class Graph():
                 - Type of module (only use one type for now)
             - Sublayer Types (future is several)
 
-    SUBLAYER API DOC:
-        • Takes in:
-            - Number of modules
+
 
 
 

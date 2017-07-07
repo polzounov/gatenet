@@ -4,16 +4,30 @@ import numpy as np
 from tensorflow_utils import *
 
 from graph.module import *
+from graph.module import *
 
 ######################################################################
 ## Code for Layers
 class Layer():
-    def __init__(self, modules):
-        self.modules = modules
+    def __init__(self, layer_definition):
+        # Todo 
+        self.M = layer_definition['M']
+        self.input_size = layer_definition.get('input_size')
+        self.output_size = layer_definition.get('output_size')
+        self.ModuleType = layer_definition.get('module_type', PerceptronModule) # Code style for module type?
+        self.act = layer_definition.get('activations', tf.nn.relu)
+        self._build() # Init modules in layer
+
+    def _build(self):
+        self.modules = np.zeros(self.M, dtype=object)
+        for i in range(self.M):
+            self.modules[i] = self.ModuleType(weight_variable([self.input_size, self.output_size]),
+                                              bias_variable([self.output_size]), activation=self.act)
+
 
 class InputLayer(Layer):
-    def __init__(self, modules):
-        super(InputLayer, self).__init__(modules)
+    def __init__(self, layer_definition):
+        super(InputLayer, self).__init__(layer_definition)
 
     def process_layer(self, input_tensors):
         output_tensors = np.zeros(len(self.modules),dtype=object)
@@ -23,13 +37,10 @@ class InputLayer(Layer):
 
 
 class GatedLayer(Layer):
-    def __init__(self, modules, input_size, output_size, gamma=2.0):
-        super(GatedLayer, self).__init__(modules)
-        self.input_size = input_size
-
-        ## CHANGE NUMBERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        self.gate_module = LinearModule(weight_variable([self.input_size, len(modules)]),
-                                              bias_variable([len(modules)]))
+    def __init__(self, layer_definition, gamma=2.0):
+        super(GatedLayer, self).__init__(layer_definition)
+        self.gate_module = LinearModule(weight_variable([self.input_size, len(self.modules)]),
+                                              bias_variable([len(self.modules)]))
         self.gates = None
         self.gamma = gamma
 
@@ -42,11 +53,11 @@ class GatedLayer(Layer):
         gates_tiled = tf.tile(gg, [1, num_cols])
 
         gates_normalized = tf.nn.relu(gates_pow / gates_tiled)
-        self.gates = tf.nn.relu(gates_normalized)
+        self.gates = tf.nn.relu(gates_normalized) # CHANGE !!! self.gates == same thing
         return gates_normalized
 
     def process_layer(self, input_tensors):
-        gates = self.compute_gates(input_tensors)
+        gates = self.compute_gates(input_tensors) # CHANGE !!! self.gates == same thing
         output_tensors = np.zeros(len(self.modules), dtype=object)
 
         for i in range(len(self.modules)):
@@ -61,9 +72,9 @@ class GatedLayer(Layer):
         return output_tensors
 
 
-class OutputLayer(Layer):
+class OutputLayer():
     def __init__(self, modules):
-        super(OutputLayer, self).__init__(modules)
+        self.modules = modules
 
     def process_layer(self, input_tensors):
         output_tensors = np.zeros(len(self.modules), dtype=object)
