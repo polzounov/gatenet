@@ -30,3 +30,15 @@ class ConcatenationSublayerModule(Sublayer):
         for i in range(len(module_tensors)-1):
             output = tf.concat([output, module_tensors[i+1]], axis=1)
         return output
+
+
+class IdentitySublayerModule(Sublayer):
+    def __init__(self, input_size, num_modules):
+        super(IdentitySublayerModule, self).__init__(input_size, num_modules)
+        self.output_size = input_size
+        if self.num_modules is not 1:
+            print('self.num_modules: ', self.num_modules)
+            raise ValueError('Incorrect number of modules for IdentitySublayerModule, should be 1')
+
+    def process_sublayer(self, module_tensors):
+        return module_tensors
