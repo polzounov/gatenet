@@ -7,14 +7,15 @@ from graph.module import *
 
 ######################################################################
 ## Code for Layers
-class Layer:
-    pass
-
-class InputLayer(Layer):
+class Layer():
     def __init__(self, modules):
         self.modules = modules
 
-    def processLayer(self, input_tensors):
+class InputLayer(Layer):
+    def __init__(self, modules):
+        super(InputLayer, self).__init__(modules)
+
+    def process_layer(self, input_tensors):
         output_tensors = np.zeros(len(self.modules),dtype=object)
         for i in range(len(self.modules)):
             output_tensors[i] = self.modules[i].processModule(input_tensors)
@@ -23,7 +24,7 @@ class InputLayer(Layer):
 
 class GatedLayer(Layer):
     def __init__(self, modules, input_size, output_size, gamma=2.0):
-        self.modules = modules
+        super(GatedLayer, self).__init__(modules)
         self.input_size = input_size
 
         ## CHANGE NUMBERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -32,7 +33,7 @@ class GatedLayer(Layer):
         self.gates = None
         self.gamma = gamma
 
-    def computeGates(self, input_tensors):
+    def compute_gates(self, input_tensors):
         gates_unnormalized = self.gate_module.processModule(input_tensors)
         gates_pow = tf.pow(gates_unnormalized, self.gamma)
 
@@ -44,8 +45,8 @@ class GatedLayer(Layer):
         self.gates = tf.nn.relu(gates_normalized)
         return gates_normalized
 
-    def processLayer(self, input_tensors):
-        gates = self.computeGates(input_tensors)
+    def process_layer(self, input_tensors):
+        gates = self.compute_gates(input_tensors)
         output_tensors = np.zeros(len(self.modules), dtype=object)
 
         for i in range(len(self.modules)):
@@ -62,9 +63,9 @@ class GatedLayer(Layer):
 
 class OutputLayer(Layer):
     def __init__(self, modules):
-        self.modules = modules
+        super(OutputLayer, self).__init__(modules)
 
-    def processLayer(self, input_tensors):
+    def process_layer(self, input_tensors):
         output_tensors = np.zeros(len(self.modules), dtype=object)
         for i in range(len(self.modules)):
             output_tensors[i] = self.modules[i].processModule(input_tensors)

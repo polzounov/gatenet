@@ -5,15 +5,18 @@ from tensorflow_utils import *
 
 ######################################################################
 ## Code for Modules
-class Module:
+class Module():
+    def __init__(self, weights, biases):
+        self.weights = weights
+        self.biases = biases
+
     def processModule(self, inputTensor):
         pass
 
 
 class PerceptronModule(Module):
     def __init__(self, weights, biases, activation):
-        self.weights = weights
-        self.biases = biases
+        super(PerceptronModule, self).__init__(weights, biases)
         self.activation = activation
 
     def processModule(self, input_tensor):
@@ -22,8 +25,7 @@ class PerceptronModule(Module):
 
 class ResidualPerceptronModule(Module):
     def __init__(self, weights, biases, activation):
-        self.weights = weights
-        self.biases = biases
+        super(ResidualPerceptronModule, self).__init__(weights, biases)
         self.activation = activation
 
     def processModule(self, input_tensor):
@@ -31,11 +33,8 @@ class ResidualPerceptronModule(Module):
 
 
 class LinearModule(Module):
-
-    def __init__(self, weights, biases, activation=None):
-        self.weights = weights
-        self.biases = biases
-        # Don't use the activation if it is given
+    def __init__(self, weights, biases):
+        super(LinearModule, self).__init__(weights, biases)
 
     def processModule(self, input_tensor):
         return tf.matmul(input_tensor, self.weights) + self.biases

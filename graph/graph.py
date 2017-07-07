@@ -68,13 +68,13 @@ class Graph():
         ## Build graph to test code
         #def return_logits(self, input_images, parameter_dict):
         ## Construct graph ###############################
-        layer_output = self.input_layer.processLayer(input_images)
+        layer_output = self.input_layer.process_layer(input_images)
         sublayer_output = self.sublayers[0].process_sublayer(layer_output)
         for i in range(self.L):
-            layer_output = self.gated_layers[i].processLayer(sublayer_output)
+            layer_output = self.gated_layers[i].process_layer(sublayer_output)
             sublayer_output = self.sublayers[i+1].process_sublayer(layer_output)
 
-        logits = self.output_layer.processLayer(sublayer_output)
+        logits = self.output_layer.process_layer(sublayer_output)
         ##################################################
         return logits
 
