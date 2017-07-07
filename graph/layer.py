@@ -22,20 +22,18 @@ class InputLayer(Layer):
 
 
 class GatedLayer(Layer):
-    def __init__(self, modules, input_size, gamma=2.0,  ):
+    def __init__(self, modules, input_size, output_size, gamma=2.0):
         self.modules = modules
         self.input_size = input_size
 
         ## CHANGE NUMBERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.gate_module = LinearModule(weight_variable([self.input_size, len(modules)]),
                                               bias_variable([len(modules)]))
-
         self.gates = None
         self.gamma = gamma
 
     def computeGates(self, input_tensors):
         gates_unnormalized = self.gate_module.processModule(input_tensors)
-
         gates_pow = tf.pow(gates_unnormalized, self.gamma)
 
         gg = tf.reshape(tf.reduce_sum(gates_pow, axis = 1), [-1,1])
@@ -47,9 +45,7 @@ class GatedLayer(Layer):
         return gates_normalized
 
     def processLayer(self, input_tensors):
-
         gates = self.computeGates(input_tensors)
-
         output_tensors = np.zeros(len(self.modules), dtype=object)
 
         for i in range(len(self.modules)):
