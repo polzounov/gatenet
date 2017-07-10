@@ -12,22 +12,23 @@ from graph.module import *
 class Graph():
 
     def __init__(self, parameter_dict):
-        self.input_layer = None
         self.gated_layers = None
         self.output_layer = None
-        self.sublayers = None
 
         ## Define Hyperparameters
-        self.M = parameter_dict['M']
-        self.L = parameter_dict['L']
+        self.M = parameter_dict['M'] # Number of modules per layer
+        self.L = parameter_dict['L'] # Number of layers
+        self.C = parameter_dict['C'] # Number of output classes
+        self.gamma = parameter_dict['gamma'] # Strength of gating
         self.tensor_shape = parameter_dict['tensor_shape']
-        self.gamma = parameter_dict['gamma']     
+        self.module_type = parameter_dict['module_type']
+        self.sublayer_type = parameter_dict['sublayer_type']
 
-        # Build new graph from param dict
-        self.build_graph(parameter_dict)
+        # Build new graph
+        self.build_graph()
 
 
-    def build_graph(self, parameter_dict):
+    def build_graph(self):
         ## Define Layers #####################################################
         prev_output_shape = 784 # Image size (first input)
         self.gated_layers = []
@@ -35,8 +36,8 @@ class Graph():
             gated_layer_defn = {'M': self.M,
                                 'input_shape': prev_output_shape,
                                 'module_output_shape': self.tensor_shape,
-                                'module_type': PerceptronModule,
-                                'sublayer_type': ConcatenationSublayerModule}
+                                'module_type': self.module_type,
+                                'sublayer_type': self.sublayer_type}
             gated_layer = GatedLayer(gated_layer_defn, self.gamma)
             prev_output_shape = gated_layer.layer_output_shape
 
@@ -44,7 +45,7 @@ class Graph():
 
         output_layer_defn = {'M': 1,
                              'input_shape': prev_output_shape,
-                             'module_output_shape': 10,
+                             'module_output_shape': self.C,
                              'module_type': LinearModule,
                              'sublayer_type': AdditionSublayerModule}
         self.output_layer = GatedLayer(output_layer_defn, gamma=0)
