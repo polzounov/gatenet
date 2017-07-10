@@ -6,24 +6,27 @@ from tensorflow_utils import *
 ######################################################################
 ## Code for Sublayer
 class Sublayer():
-    def __init__(self, input_size, num_modules):
-        self.input_size = input_size
+    def __init__(self, input_shape, num_modules):
+        self.input_shape = input_shape
         self.num_modules = num_modules
 
 
 class AdditionSublayerModule(Sublayer):
-    def __init__(self, input_size, num_modules):
-        super(AdditionSublayerModule, self).__init__(input_size, num_modules)
-        self.output_size = input_size
+    '''Averages the values of the sublayer (assume inputs are same size)'''
+    def __init__(self, input_shape, num_modules):
+        super(AdditionSublayerModule, self).__init__(input_shape, num_modules)
+        self.output_shape = input_shape
 
     def process_sublayer(self, module_tensors):
         return np.sum(module_tensors) / self.num_modules
 
 
 class ConcatenationSublayerModule(Sublayer):
-    def __init__(self, input_size, num_modules):
-        super(ConcatenationSublayerModule, self).__init__(input_size, num_modules)
-        self.output_size = input_size*num_modules
+    '''Concatenates the input modules along axis=1, (H and W should be the same)'''
+    # For 4d tensors order is NCHW
+    def __init__(self, input_shape, num_modules):
+        super(ConcatenationSublayerModule, self).__init__(input_shape, num_modules)
+        self.output_shape = input_shape*num_modules
 
     def process_sublayer(self, module_tensors):
         output = module_tensors[0]
@@ -33,9 +36,10 @@ class ConcatenationSublayerModule(Sublayer):
 
 
 class IdentitySublayerModule(Sublayer):
-    def __init__(self, input_size, num_modules):
-        super(IdentitySublayerModule, self).__init__(input_size, num_modules)
-        self.output_size = input_size
+    '''Returns input (can only be one input!)'''
+    def __init__(self, input_shape, num_modules):
+        super(IdentitySublayerModule, self).__init__(input_shape, num_modules)
+        self.output_shape = input_shape
         if self.num_modules is not 1:
             print('self.num_modules: ', self.num_modules)
             raise ValueError('Incorrect number of modules for IdentitySublayerModule, should be 1')

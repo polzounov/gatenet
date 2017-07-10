@@ -12,8 +12,8 @@ class Layer():
     def __init__(self, layer_definition):
         # Todo 
         self.M = layer_definition['M']
-        self.input_size = layer_definition.get('input_size')
-        self.module_output_size = layer_definition.get('module_output_size')
+        self.input_shape = layer_definition.get('input_shape')
+        self.module_output_shape = layer_definition.get('module_output_shape')
         # TODO: Make module type work with lists (for module variation inside layer)
         self.ModuleType = layer_definition.get('module_type')
         self.SublayerType = layer_definition.get('sublayer_type')
@@ -25,18 +25,18 @@ class Layer():
     def _build_modules(self):
         self.modules = np.zeros(self.M, dtype=object)
         for i in range(self.M):
-            self.modules[i] = self.ModuleType(weight_variable([self.input_size, self.module_output_size]),
-                                              bias_variable([self.module_output_size]), activation=self.act)
+            self.modules[i] = self.ModuleType(weight_variable([self.input_shape, self.module_output_shape]),
+                                              bias_variable([self.module_output_shape]), activation=self.act)
 
     def _build_sublayer(self):
-        self.sublayer = self.SublayerType(self.module_output_size, self.M)
-        self.layer_output_size = self.sublayer.output_size
+        self.sublayer = self.SublayerType(self.module_output_shape, self.M)
+        self.layer_output_shape = self.sublayer.output_shape
 
 
 class GatedLayer(Layer):
     def __init__(self, layer_definition, gamma=2.0):
         super(GatedLayer, self).__init__(layer_definition)
-        self.gate_module = LinearModule(weight_variable([self.input_size, len(self.modules)]),
+        self.gate_module = LinearModule(weight_variable([self.input_shape, len(self.modules)]),
                                         bias_variable([len(self.modules)]))
         self.gates = None
         self.gamma = gamma
