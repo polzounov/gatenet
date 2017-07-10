@@ -26,26 +26,26 @@ class Graph():
         ## Define Hyperparameters #########################################################
         self.M = parameter_dict['M']
         self.L = parameter_dict['L']
-        self.tensor_size = parameter_dict['tensor_size']
+        self.tensor_shape = parameter_dict['tensor_shape']
         self.gamma = parameter_dict['gamma']        
 
         ## Define Layers #################################################################
-        prev_output_size = 784 # Image size (first input)
+        prev_output_shape = 784 # Image size (first input)
         self.gated_layers = []
         for i in range(self.L):
             gated_layer_defn = {'M': self.M,
-                                'input_size': prev_output_size,
-                                'module_output_size': self.tensor_size,
+                                'input_shape': prev_output_shape,
+                                'module_output_shape': self.tensor_shape,
                                 'module_type': PerceptronModule,
                                 'sublayer_type': ConcatenationSublayerModule}
             gated_layer = GatedLayer(gated_layer_defn, self.gamma)
-            prev_output_size = gated_layer.layer_output_size
+            prev_output_shape = gated_layer.layer_output_shape
 
             self.gated_layers.append(gated_layer)
 
         output_layer_defn = {'M': 1,
-                             'input_size': prev_output_size,
-                             'module_output_size': 10,
+                             'input_shape': prev_output_shape,
+                             'module_output_shape': 10,
                              'module_type': LinearModule,
                              'sublayer_type': AdditionSublayerModule}
         self.output_layer = GatedLayer(output_layer_defn, gamma=0)

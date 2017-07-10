@@ -7,19 +7,19 @@ def train_gate_network(parameter_dict, input_data, input_labels, test_data, test
     gates_train = input_data
     #gates_train *= 1000
     if use_gates == 1:
-        input_size = parameter_dict['L'] * parameter_dict['M']
+        input_shape = parameter_dict['L'] * parameter_dict['M']
     else:
-        input_size = 28 * 28
+        input_shape = 28 * 28
 
     # W = weight_variable([gates_train.shape[1], 10])
-    h_layer_size = 100
-    W1 = weight_variable([input_size, h_layer_size])
-    b1 = bias_variable([h_layer_size])
+    h_layer_shape = 100
+    W1 = weight_variable([input_shape, h_layer_shape])
+    b1 = bias_variable([h_layer_shape])
 
-    W2 = weight_variable([h_layer_size, 10])
+    W2 = weight_variable([h_layer_shape, 10])
     b2 = bias_variable([10])
 
-    gate_x = tf.placeholder(tf.float32, [None, input_size])
+    gate_x = tf.placeholder(tf.float32, [None, input_shape])
     gate_y1 = tf.nn.relu(tf.matmul(gate_x, W1) + b1)
     gate_y = tf.matmul(gate_y1, W2) + b2
     gate_y_ = tf.placeholder(tf.float32, [None, 10])

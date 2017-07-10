@@ -64,7 +64,10 @@ class ConvModule(Module):
         self.padding='SAME'
 
     def process_module(self, input_tensor):
-        return self.activation(tf.nn.conv2d(input_tensor, self.weights, strides=self.strides, padding=self.padding))
+        return self.activation(tf.nn.conv2d(input_tensor, 
+                                            self.weights, 
+                                            strides=self.strides, 
+                                            padding=self.padding))
 
 
 class ResidualConvModule(Module):
@@ -76,4 +79,7 @@ class ResidualConvModule(Module):
         self.padding='SAME'
 
     def process_module(self, input_tensor):
-        return self.activation(tf.nn.conv2d(input_tensor, self.weights, strides=self.strides, padding=self.padding)) + input_tensor
+        return self.activation(tf.nn.conv2d(input_tensor, 
+                                            self.weights, 
+                                            strides=self.strides, 
+                                            padding=self.padding)) + input_tensor

@@ -3,12 +3,12 @@ import pickle
 
 class Parameters:
     def __init__(self):
-        self.M = 10
-        self.L = 3
-        self.tensor_size = 20
+        self.M = 3
+        self.L = 5
+        self.tensor_shape = 20
         self.gamma = 2
         self.batch_size = 100
-        self.num_batches = 101
+        self.num_batches = 1001
         self.learning_rate = 0.001
         self.output_file = 'test'
 
