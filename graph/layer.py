@@ -25,8 +25,8 @@ class Layer():
     def _build_modules(self):
         self.modules = np.zeros(self.M, dtype=object)
         for i in range(self.M):
-            self.modules[i] = self.ModuleType(weight_variable([self.input_shape, self.module_output_shape]),
-                                              bias_variable([self.module_output_shape]), activation=self.act)
+            print('self.input_shape', self.input_shape, ', self.module_output_shape', self.module_output_shape)
+            self.modules[i] = self.ModuleType(self.input_shape, self.module_output_shape, activation=self.act)
 
     def _build_sublayer(self):
         self.sublayer = self.SublayerType(self.module_output_shape, self.M)
@@ -36,8 +36,7 @@ class Layer():
 class GatedLayer(Layer):
     def __init__(self, layer_definition, gamma=2.0):
         super(GatedLayer, self).__init__(layer_definition)
-        self.gate_module = LinearModule(weight_variable([self.input_shape, len(self.modules)]),
-                                        bias_variable([len(self.modules)]))
+        self.gate_module = LinearModule(self.input_shape, (None, len(self.modules)))
         self.gates = None
         self.gamma = gamma
 
