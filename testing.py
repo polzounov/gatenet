@@ -5,13 +5,14 @@ from graph.module import *
 
 class Parameters:
     def __init__(self):
-        self.M = 3
-        self.L = 5
+        self.M = 2
+        self.L = 2
         self.C = 10 # MNIST digits
 
-        self.module_type = PerceptronModule
+        self.module_type = ConvModule
         self.sublayer_type = AdditionSublayerModule
-        self.tensor_shape = (None, 20)
+        self.tensor_shape = (None, 1, 28, 28)
+        self.image_shape = (None, 1, 28, 28)
 
         self.gamma = 2
         self.batch_size = 100

@@ -4,7 +4,6 @@ import numpy as np
 from tensorflow_utils import *
 
 from graph.module import *
-from graph.module import *
 
 ######################################################################
 ## Code for Layers
@@ -17,7 +16,6 @@ class Layer():
         # TODO: Make module type work with lists (for module variation inside layer)
         self.ModuleType = layer_definition.get('module_type')
         self.SublayerType = layer_definition.get('sublayer_type')
-
         self.act = layer_definition.get('activations', tf.nn.relu)
         self._build_modules() # Init modules in layer
         self._build_sublayer()
@@ -25,22 +23,38 @@ class Layer():
     def _build_modules(self):
         self.modules = np.zeros(self.M, dtype=object)
         for i in range(self.M):
-            print('self.input_shape', self.input_shape, ', self.module_output_shape', self.module_output_shape)
             self.modules[i] = self.ModuleType(self.input_shape, self.module_output_shape, activation=self.act)
 
     def _build_sublayer(self):
         self.sublayer = self.SublayerType(self.module_output_shape, self.M)
         self.layer_output_shape = self.sublayer.output_shape
 
+    ## TODO: Clean up code
+    def _flatten_input(self, input_tensors):
+        # Flatten the input to 2d if in 4d
+        if len(input_tensors.shape) == 4:
+            N, C, H, W = input_tensors.shape
+            return tf.reshape(input_tensors, [-1, C*H*W])
+        return input_tensors
+    ## END TODO
+
 
 class GatedLayer(Layer):
     def __init__(self, layer_definition, gamma=2.0):
         super(GatedLayer, self).__init__(layer_definition)
-        self.gate_module = LinearModule(self.input_shape, (None, len(self.modules)))
+        ## TODO: Clean up code
+        # Gates take in 2d input shape (they are fully connected)
+        if len(self.input_shape) == 4:
+            N, C, H, W = self.input_shape
+            self.gate_module = LinearModule([N, C*H*W], (None, len(self.modules)))
+        else:
+            self.gate_module = LinearModule(self.input_shape, (None, len(self.modules)))
+        ## END TODO
         self.gates = None
         self.gamma = gamma
 
     def compute_gates(self, input_tensors):
+        input_tensors = self._flatten_input(input_tensors) # force 2d
         gates_unnormalized = self.gate_module.process_module(input_tensors)
         gates_pow = tf.pow(gates_unnormalized, self.gamma)
 
@@ -65,5 +79,34 @@ class GatedLayer(Layer):
             gates_tiled = tf.tile(gg, [1,num_cols])
             output_tensors[i] = tf.multiply(output_tensors[i], gates_tiled)
 
+        return self.sublayer.process_sublayer(output_tensors)
+
+
+class OutputLayer(Layer):
+    def __init__(self, layer_definition):
+        print('Init outputlayer')
+        print(layer_definition)
+        ## TODO: Clean up code
+        if len(layer_definition['input_shape']) == 4:
+            N, C, H, W = layer_definition['input_shape']
+            layer_definition['input_shape'] = (N, C*H*W) # Force 2d
+        ## END TODO
+        print('after')
+        print(layer_definition)
+        super(OutputLayer, self).__init__(layer_definition)
+        # Check that ModuleType makes sense
+        ## TODO: Clean up code
+        if self.ModuleType not in set([LinearModule, PerceptronModule]):
+            print('self.ModuleType is:', self.ModuleType)
+            raise ValueError('Ouput layer has incorrect modules')
+        ## END TODO
+
+    def process_layer(self, input_tensors):
+        print('flatten tensor, shape before:', input_tensors.shape)
+        input_tensors = self._flatten_input(input_tensors) # force 2d ## TODO: Clean up code
+        print('flatten tensor, shape after:', input_tensors.shape)
+        output_tensors = np.zeros(len(self.modules), dtype=object)
+        for i in range(len(self.modules)):
+            output_tensors[i] = self.modules[i].process_module(input_tensors)
         return self.sublayer.process_sublayer(output_tensors)
 ######################################################################
