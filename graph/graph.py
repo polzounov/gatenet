@@ -60,6 +60,16 @@ class Graph():
     def return_logits(self, input_images):
         '''Return the output of graph based off of input_images'''
         ## Construct graph ###################################################
+
+        ##### Test Code
+        next_input = input_images
+        for i in range(1):
+            next_input = self.gated_layers[i].process_layer(next_input)
+        logits = self.output_layer.process_layer(next_input)
+        ######################################################################
+        return logits
+
+
         next_input = input_images
         for i in range(self.L):
             next_input = self.gated_layers[i].process_layer(next_input)

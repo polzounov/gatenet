@@ -22,12 +22,12 @@ def weight_helper(input_shape,
         return (input_shape[1], output_shape[1])
 
     # For the 4d (convolutional) case
-    N, C, W, H = input_shape
+    N, W, H, C = input_shape
     Nout, F, Wout, Hout = output_shape
     HH, WW = filters
     if N != Nout:
         raise ValueError('Number of input and output datapoints are different')
-    return (F, C, HH, WW)
+    return (HH, WW, C, F)
 
 
 def bias_helper(input_shape,
@@ -45,7 +45,7 @@ def bias_helper(input_shape,
         return (output_shape[1],)
 
     # For the 4d (convolutional) case
-    N, C, W, H = input_shape
+    N, W, H, C = input_shape
     Nout, F, Wout, Hout = output_shape
     HH, WW = filters
     if N != Nout:

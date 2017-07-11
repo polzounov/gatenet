@@ -33,7 +33,15 @@ class Layer():
     def _flatten_input(self, input_tensors):
         # Flatten the input to 2d if in 4d
         if len(input_tensors.shape) == 4:
-            N, C, H, W = input_tensors.shape
+
+
+            ###############################
+            ##############################
+            ## Switched out .shape with .get_shape().as_list() to get size in integers
+            N, C, H, W = input_tensors.get_shape().as_list()
+            ###############################
+            ##############################
+
             return tf.reshape(input_tensors, [-1, C*H*W])
         return input_tensors
     ## END TODO
