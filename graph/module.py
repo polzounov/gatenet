@@ -3,6 +3,38 @@ import numpy as np
 #from parameters import Parameters
 from tensorflow_utils import *
 
+
+import sonnet as snt
+
+######################################################################
+## Code for Sonnet Modules
+
+class ConvModule(snt.AbstractModule):
+  def __init__(self, kernal_shape,output_channels,activation, name="conv_module"):
+    super(ConvModule, self).__init__(name=name)
+    self._kernal_shape = kernal_shape
+    self._output_channels = output_channels
+    self._activation = activation
+
+  def _build(self, inputs):
+      with self._enter_variable_scope():
+          conv = snt.Conv2D(self._output_channels, self._kernal_shape)
+          return self._activation(conv(inputs))
+
+
+
+class PerceptronModule(snt.AbstractModule):
+  def __init__(self, hidden_size, activation, name="perceptron_module"):
+      super(PerceptronModule, self).__init__(name=name)
+      self._activation = activation
+      self._hidden_size = hidden_size
+
+  def _build(self, inputs):
+      with self._enter_variable_scope():
+          perceptron = snt.Linear(output_size=self._hidden_size, name="perceptron")
+          return self._activation(perceptron(inputs))
+
+
 ######################################################################
 ## Code for Modules
 class Module():
