@@ -29,32 +29,15 @@ class Layer():
         self.sublayer = self.SublayerType(self.module_output_shape, self.M)
         self.layer_output_shape = self.sublayer.output_shape
 
-    ## TODO: Clean up code
-    def _flatten_input(self, input_tensors):
-        # Flatten the input to 2d if in 4d
-        if len(input_tensors.shape) == 4:
-            N, C, H, W = input_tensors.shape
-            return tf.reshape(input_tensors, [-1, C*H*W])
-        return input_tensors
-    ## END TODO
-
 
 class GatedLayer(Layer):
     def __init__(self, layer_definition, gamma=2.0):
         super(GatedLayer, self).__init__(layer_definition)
-        ## TODO: Clean up code
-        # Gates take in 2d input shape (they are fully connected)
-        if len(self.input_shape) == 4:
-            N, C, H, W = self.input_shape
-            self.gate_module = LinearModule([N, C*H*W], (None, len(self.modules)))
-        else:
-            self.gate_module = LinearModule(self.input_shape, (None, len(self.modules)))
-        ## END TODO
+        self.gate_module = LinearModule(self.input_shape, (None, len(self.modules)))
         self.gates = None
         self.gamma = gamma
 
     def compute_gates(self, input_tensors):
-        input_tensors = self._flatten_input(input_tensors) # force 2d
         gates_unnormalized = self.gate_module.process_module(input_tensors)
         gates_pow = tf.pow(gates_unnormalized, self.gamma)
 
@@ -73,7 +56,7 @@ class GatedLayer(Layer):
         for i in range(len(self.modules)):
             # Get the number of rows in the fed value at run-time.
             output_tensors[i] = self.modules[i].process_module(input_tensors)
-            num_cols =  np.int32(output_tensors[i].get_shape()[1])
+            num_cols = np.int32(output_tensors[i].get_shape()[1])
 
             gg = tf.reshape(gates[:,i], [-1,1])
             gates_tiled = tf.tile(gg, [1,num_cols])
@@ -84,21 +67,12 @@ class GatedLayer(Layer):
 
 class OutputLayer(Layer):
     def __init__(self, layer_definition):
-        print('Init outputlayer')
-        print(layer_definition)
-        ## TODO: Clean up code
-        if len(layer_definition['input_shape']) == 4:
-            N, C, H, W = layer_definition['input_shape']
-            layer_definition['input_shape'] = (N, C*H*W) # Force 2d
-        ## END TODO
-        print('after')
-        print(layer_definition)
         super(OutputLayer, self).__init__(layer_definition)
-        # Check that ModuleType makes sense
         ## TODO: Clean up code
+        # Check that ModuleType makes sense
         if self.ModuleType not in set([LinearModule, PerceptronModule]):
             print('self.ModuleType is:', self.ModuleType)
-            raise ValueError('Ouput layer has incorrect modules')
+            raise ValueError('Ouput layer has incorrect module type')
         ## END TODO
 
     def process_layer(self, input_tensors):

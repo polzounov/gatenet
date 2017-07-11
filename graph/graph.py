@@ -52,7 +52,7 @@ class Graph():
                              'input_shape': prev_output_shape,
                              'module_output_shape': (None, self.C),
                              'module_type': LinearModule,
-                             'sublayer_type': AdditionSublayerModule}
+                             'sublayer_type': IdentitySublayerModule}
         self.output_layer = OutputLayer(output_layer_defn)
         ######################################################################
 
