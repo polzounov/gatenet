@@ -35,6 +35,17 @@ class PerceptronModule(snt.AbstractModule):
           return self._activation(perceptron(inputs))
 
 
+class LinearModule(snt.AbstractModule):
+  def __init__(self, hidden_size, name="linear_module"):
+      super(LinearModule, self).__init__(name=name)
+      self._hidden_size = hidden_size
+
+  def _build(self, inputs):
+      with self._enter_variable_scope():
+          linear_unit = snt.Linear(output_size=self._hidden_size, name="linear_unit")
+          return linear_unit(inputs)
+
+
 ######################################################################
 ## Code for Modules
 class Module():
