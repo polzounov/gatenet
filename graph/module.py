@@ -8,8 +8,9 @@ from tensorflow_utils import *
 ## Code for Modules
 ###### TEMPORARY CODE ########################################################
 def flatten_shape(shape):
-    N, C, W, H = shape
-    return (N, C*W*H)
+    N, H, W, C = shape
+    print('flattening', shape, ', to', (N, H*W*C))
+    return (N, H*W*C)
 
 def weight_helper(input_shape,
                   output_shape,
@@ -17,36 +18,39 @@ def weight_helper(input_shape,
     '''Takes input shape and output shape, and decides the shapes of
     weights needed to convert from input to output shape
     '''
+    if len(input_shape) == 2:
+        return (input_shape[1], output_shape[1])
+
     if len(input_shape) != len(output_shape): # in/out dims don't match
         input_shape = flatten_shape(input_shape)
-
-    if len(intput_shape) == 2:
+        if len(input_shape) != 2:
+            raise ValueError('Flatten did not work')
         return (input_shape[1], output_shape[1])
-    else:
-        raise ValueError('Flatten did not work')
 
     # For the 4d (convolutional) case
-    N, C, W, H = input_shape; Nout, F, Wout, Hout = output_shape; HH, WW = filters
+    N, H, W, C = input_shape; Nout, Hout, Wout, F = output_shape; HH, WW = filters
     if N != Nout:
         raise ValueError('Number of input and output datapoints are different')
-    return (F, C, HH, WW)
+    return (HH, WW, C, F)
 
 
 def bias_helper(input_shape,
-                  output_shape,
-                  filters=(3,3)):
+                output_shape,
+                filters=(3,3)):
     '''Takes input shape and output shape, and decides the shapes of
     weights needed to convert from input to output shape
     '''
-    if len(input_shape) != len(output_shape):
+    if len(input_shape) == 2:
+        return (output_shape[1],)
+
+    if len(input_shape) != len(output_shape): # in/out dims don't match
         input_shape = flatten_shape(input_shape)
-    if len(intput_shape) == 2:
-        return (input_shape[1], output_shape[1])
-    else:
-        raise ValueError('Flatten did not work')
+        if len(input_shape) != 2:
+            raise ValueError('Flatten did not work')
+        return (output_shape[1],)
 
     # For the 4d (convolutional) case
-    N, C, W, H = input_shape; Nout, F, Wout, Hout = output_shape; HH, WW = filters
+    N, H, W, C = input_shape; Nout, Hout, Wout, F = output_shape; HH, WW = filters
     if N != Nout:
         raise ValueError('Number of input and output datapoints are different')
     return (F,)
@@ -57,15 +61,14 @@ class Module():
     def __init__(self, input_shape, output_shape, activation):
         self.weights = weight_variable(weight_helper(input_shape, output_shape))
         self.biases = bias_variable(bias_helper(input_shape, output_shape))
-        print('self.weights.shape', self.weights.shape)
         self.activation = activation
 
     def _flatten(self, input_tensor):
         '''Flatten the input to 2d if input is in 4d'''
         if len(input_tensor.shape) == 2:
             return input_tensor
-        N, C, H, W = input_tensor.shape
-        return tf.reshape(input_tensor, [-1, C*H*W])
+        N, H, W, C = input_tensor.get_shape().as_list()
+        return tf.reshape(input_tensor, [-1, H*W*C])
 
 
 class PerceptronModule(Module):

@@ -76,9 +76,6 @@ class OutputLayer(Layer):
         ## END TODO
 
     def process_layer(self, input_tensors):
-        print('flatten tensor, shape before:', input_tensors.shape)
-        input_tensors = self._flatten_input(input_tensors) # force 2d ## TODO: Clean up code
-        print('flatten tensor, shape after:', input_tensors.shape)
         output_tensors = np.zeros(len(self.modules), dtype=object)
         for i in range(len(self.modules)):
             output_tensors[i] = self.modules[i].process_module(input_tensors)

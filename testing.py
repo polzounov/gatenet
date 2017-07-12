@@ -6,13 +6,13 @@ from graph.module import *
 class Parameters:
     def __init__(self):
         self.M = 2
-        self.L = 2
+        self.L = 1
         self.C = 10 # MNIST digits
 
         self.module_type = ConvModule
         self.sublayer_type = AdditionSublayerModule
-        self.tensor_shape = (None, 1, 28, 28)
-        self.image_shape = (None, 1, 28, 28)
+        self.tensor_shape = (None, 28, 28, 1) # N,H,W,C
+        self.image_shape = (None, 28, 28, 1) # N,H,W,F
 
         self.gamma = 2
         self.batch_size = 100

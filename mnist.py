@@ -27,7 +27,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   sess = tf.InteractiveSession()
 
   # Input placeholders
-  x = tf.placeholder(tf.float32, [None, 784], name='x-input')
+  x = tf.placeholder(tf.float32, [None, 28, 28, 1], name='x-input')
   y_ = tf.placeholder(tf.float32, [None, 10], name='y-input')
 
   # Build computation graph
@@ -62,6 +62,8 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
 
     tr_data = tr_data[elems,:]
     tr_label = tr_label[elems,:]
+
+    tr_data = np.reshape(tr_data, (-1,28,28,1))
 
     if len(tr_data) < 50:
       continue
