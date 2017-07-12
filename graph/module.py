@@ -4,8 +4,48 @@ import sonnet as snt
 #from parameters import Parameters
 from tensorflow_utils import *
 
+import sonnet as snt
+## Code for Sonnet Modules
+
+class ConvModule(snt.AbstractModule):
+  def __init__(self, kernal_shape,output_channels,activation, name="conv_module"):
+    super(ConvModule, self).__init__(name=name)
+    self._kernal_shape = kernal_shape
+    self._output_channels = output_channels
+    self._activation = activation
+
+  def _build(self, inputs):
+      with self._enter_variable_scope():
+          conv = snt.Conv2D(self._output_channels, self._kernal_shape)
+          return self._activation(conv(inputs))
+
+
+
+class PerceptronModule(snt.AbstractModule):
+  def __init__(self, hidden_size, activation, name="perceptron_module"):
+      super(PerceptronModule, self).__init__(name=name)
+      self._activation = activation
+      self._hidden_size = hidden_size
+
+  def _build(self, inputs):
+      with self._enter_variable_scope():
+          perceptron = snt.Linear(output_size=self._hidden_size, name="perceptron")
+          return self._activation(perceptron(inputs))
+
+
+class LinearModule(snt.AbstractModule):
+  def __init__(self, hidden_size, name="linear_module"):
+      super(LinearModule, self).__init__(name=name)
+      self._hidden_size = hidden_size
+
+  def _build(self, inputs):
+      with self._enter_variable_scope():
+          linear_unit = snt.Linear(output_size=self._hidden_size, name="linear_unit")
+          return linear_unit(inputs)
+
 ##############################################################################
 ## Code for Modules
+"""
 ###### TEMPORARY CODE ########################################################
 def flatten_shape(shape):
     N, H, W, C = shape
@@ -105,7 +145,7 @@ class ConvModule(Module):
                                             strides=self.strides, 
                                             padding=self.padding) + self.biases)
 ###### END TEMPORARY CODE ####################################################
-
+"""
 '''
 class ResidualPerceptronModule(Module):
     # 2d only
