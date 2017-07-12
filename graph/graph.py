@@ -20,9 +20,11 @@ class Graph():
         self.L = parameter_dict['L'] # Number of layers
         self.C = parameter_dict['C'] # Number of output classes
         self.gamma = parameter_dict['gamma'] # Strength of gating
-        self.tensor_shape = parameter_dict['tensor_shape']
         self.module_type = parameter_dict['module_type']
         self.sublayer_type = parameter_dict['sublayer_type']
+
+        self.tensor_shape = parameter_dict['tensor_shape']
+        self.image_shape = parameter_dict['image_shape'] # Input image shape
 
         # Build new graph
         self.build_graph()
@@ -30,7 +32,7 @@ class Graph():
 
     def build_graph(self):
         ## Define Layers #####################################################
-        prev_output_shape = 784 # Image size (first input)
+        prev_output_shape = self.image_shape # Input image shape (first input)
         self.gated_layers = []
         for i in range(self.L):
             gated_layer_defn = {'M': self.M,
@@ -38,23 +40,36 @@ class Graph():
                                 'module_output_shape': self.tensor_shape,
                                 'module_type': self.module_type,
                                 'sublayer_type': self.sublayer_type}
-            gated_layer = GatedLayer(gated_layer_defn, self.gamma)
+            gated_layer = GatedLayer(gated_layer_defn, gamma=self.gamma)
+            print('(graph)before shape', prev_output_shape)
             prev_output_shape = gated_layer.layer_output_shape
+            print('(graph)after shape', prev_output_shape)
+
 
             self.gated_layers.append(gated_layer)
 
         output_layer_defn = {'M': 1,
                              'input_shape': prev_output_shape,
-                             'module_output_shape': self.C,
+                             'module_output_shape': (None, self.C),
                              'module_type': LinearModule,
                              'sublayer_type': AdditionSublayerModule}
-        self.output_layer = GatedLayer(output_layer_defn, gamma=0)
+        self.output_layer = OutputLayer(output_layer_defn)
         ######################################################################
 
 
     def return_logits(self, input_images):
         '''Return the output of graph based off of input_images'''
         ## Construct graph ###################################################
+
+        ##### Test Code
+        next_input = input_images
+        for i in range(1):
+            next_input = self.gated_layers[i].process_layer(next_input)
+        logits = self.output_layer.process_layer(next_input)
+        ######################################################################
+        return logits
+
+
         next_input = input_images
         for i in range(self.L):
             next_input = self.gated_layers[i].process_layer(next_input)
