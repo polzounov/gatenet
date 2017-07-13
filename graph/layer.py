@@ -9,7 +9,6 @@ from graph.module import *
 ## Code for Layers
 class Layer():
     def __init__(self, layer_definition):
-        # Todo 
         self.M = layer_definition['M']
         self.hidden_size = layer_definition.get('hidden_size') # Also # of output channels
         # TODO: Make module type work with lists (for module variation inside layer)
@@ -22,16 +21,19 @@ class Layer():
     def _build_modules(self):
         self.modules = np.zeros(self.M, dtype=object)
         for i in range(self.M):
-            self.modules[i] = self.ModuleType(self.hidden_size, activation=self.act)
+            with tf.variable_scope('module_'+str(i)):
+                self.modules[i] = self.ModuleType(self.hidden_size, activation=self.act)
 
     def _build_sublayer(self):
-        self.sublayer = self.SublayerType(self.M)
+        with tf.variable_scope('sublayer'):
+            self.sublayer = self.SublayerType(self.M)
 
 
 class GatedLayer(Layer):
     def __init__(self, layer_definition, gamma=2.0):
         super(GatedLayer, self).__init__(layer_definition)
-        self.gate_module = LinearModule(len(self.modules))
+        with tf.variable_scope('gates'):
+            self.gate_module = LinearModule(len(self.modules))
         self.gates = None
         self.gamma = gamma
 
@@ -63,19 +65,16 @@ class GatedLayer(Layer):
         return self.sublayer.process_sublayer(output_tensors)
 
 
-class OutputLayer(Layer):
-    def __init__(self, layer_definition):
-        super(OutputLayer, self).__init__(layer_definition)
-        ## TODO: Clean up code
-        # Check that ModuleType makes sense
-        if self.ModuleType not in set([LinearModule, PerceptronModule]):
-            print('self.ModuleType is:', self.ModuleType)
-            raise ValueError('Ouput layer has incorrect module type')
-        ## END TODO
+class OutputLayer():
+    def __init__(self, C=10): 
+        self.C = C
+        self._build() # Init
+
+    def _build(self):
+        with tf.variable_scope('module'):
+            self.module = LinearModule(hidden_size=self.C)
 
     def process_layer(self, input_tensors):
-        output_tensors = np.zeros(len(self.modules), dtype=object)
-        for i in range(len(self.modules)):
-            output_tensors[i] = self.modules[i](input_tensors)
-        return self.sublayer.process_sublayer(output_tensors)
+        flattened_input = flatten_to_2d(input_tensors)
+        return self.module(flattened_input)
 ######################################################################

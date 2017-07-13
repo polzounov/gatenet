@@ -33,7 +33,7 @@ class PerceptronModule(snt.AbstractModule):
     def _build(self, inputs):
         with self._enter_variable_scope():
             perceptron = snt.Linear(output_size=self._hidden_size, name='perceptron')
-            return self._activation(perceptron(flatten(inputs)))
+            return self._activation(perceptron(inputs))
 
 
 class LinearModule(snt.AbstractModule):
@@ -44,15 +44,8 @@ class LinearModule(snt.AbstractModule):
     def _build(self, inputs):
         with self._enter_variable_scope():
             linear_unit = snt.Linear(output_size=self._hidden_size, name='linear_unit')
-            return linear_unit(flatten(inputs))
+            return linear_unit(inputs)
 
-def flatten(input_tensor):
-    '''Flatten the input to 2d if input is in 4d'''
-    if len(input_tensor.shape) == 2:
-        return input_tensor
-    N, H, W, C = input_tensor.get_shape().as_list()
-    input_tensor = tf.reshape(input_tensor, [-1, H*W*C])
-    return input_tensor
 ##############################################################################
 ## Code for Modules
 """

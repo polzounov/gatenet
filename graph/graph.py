@@ -33,18 +33,15 @@ class Graph():
         ## Define Layers #####################################################
         self.gated_layers = []
         for i in range(self.L):
-            gated_layer_defn = {'M': self.M,
-                                'hidden_size': self.hidden_size,
-                                'module_type': self.module_type,
-                                'sublayer_type': self.sublayer_type}
-            gated_layer = GatedLayer(gated_layer_defn, gamma=self.gamma)
-            self.gated_layers.append(gated_layer)
-
-        output_layer_defn = {'M': 1,
-                             'hidden_size': self.C,
-                             'module_type': LinearModule,
-                             'sublayer_type': IdentitySublayerModule}
-        self.output_layer = OutputLayer(output_layer_defn)
+            with tf.variable_scope('gated_layer_'+str(i)):
+                gated_layer_defn = {'M': self.M,
+                                    'hidden_size': self.hidden_size,
+                                    'module_type': self.module_type,
+                                    'sublayer_type': self.sublayer_type}
+                gated_layer = GatedLayer(gated_layer_defn, gamma=self.gamma)
+                self.gated_layers.append(gated_layer)
+            with tf.variable_scope('output_layer'):
+                self.output_layer = OutputLayer(C=self.C)
         ######################################################################
 
 
