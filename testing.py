@@ -11,8 +11,7 @@ class Parameters:
 
         self.module_type = ConvModule
         self.sublayer_type = AdditionSublayerModule
-        self.tensor_shape = (None, 28, 28, 1) # N,H,W,C
-        self.image_shape = (None, 28, 28, 1) # N,H,W,F
+        self.hidden_size = 2 # Hidden size or # of conv filters
 
         self.gamma = 2
         self.batch_size = 100

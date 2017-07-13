@@ -8,16 +8,13 @@ import sonnet as snt
 ## Code for Sonnet Modules
 
 class ConvModule(snt.AbstractModule):
-    #def __init__(self, output_channels, kernel_shape=3, activation=tf.nn.relu, name="conv_module"):
     def __init__(self,
-                 input_shape,
-                 output_shape,
+                 output_channels,
                  kernel_shape=3,
                  activation=tf.nn.relu,
                  name='conv_module'):
         super(ConvModule, self).__init__(name='name')
-        #self._output_channels = output_channels
-        self._output_channels = output_shape[-1] # last el is channels
+        self._output_channels = output_channels
         self._kernel_shape = kernel_shape
         self._activation = activation
 
@@ -28,12 +25,10 @@ class ConvModule(snt.AbstractModule):
 
 
 class PerceptronModule(snt.AbstractModule):
-    #def __init__(self, hidden_size, activation=tf.nn.relu, name='perceptron_module'):
-    def __init__(self, output_shape, activation=tf.nn.relu, name='perceptron_module'):
+    def __init__(self, hidden_size, activation=tf.nn.relu, name='perceptron_module'):
         super(PerceptronModule, self).__init__(name='name')
         self._activation = activation
-        #self._hidden_size = hidden_size
-        self._hidden_size = output_shape[-1]
+        self._hidden_size = hidden_size
 
     def _build(self, inputs):
         with self._enter_variable_scope():
@@ -42,11 +37,9 @@ class PerceptronModule(snt.AbstractModule):
 
 
 class LinearModule(snt.AbstractModule):
-    #def __init__(self, hidden_size, name='linear_module'):
-    def __init__(self, output_shape, name='linear_module', activation=None):
+    def __init__(self, hidden_size, name='linear_module', activation=None):
         super(LinearModule, self).__init__(name='name')
-        #self._hidden_size = hidden_size
-        self._hidden_size = output_shape[-1]
+        self._hidden_size = hidden_size
 
     def _build(self, inputs):
         with self._enter_variable_scope():

@@ -23,8 +23,7 @@ class Graph():
         self.module_type = parameter_dict['module_type']
         self.sublayer_type = parameter_dict['sublayer_type']
 
-        self.tensor_shape = parameter_dict['tensor_shape']
-        self.image_shape = parameter_dict['image_shape'] # Input image shape
+        self.hidden_size = parameter_dict['hidden_size']
 
         # Build new graph
         self.build_graph()
@@ -32,25 +31,17 @@ class Graph():
 
     def build_graph(self):
         ## Define Layers #####################################################
-        prev_output_shape = self.image_shape # Input image shape (first input)
         self.gated_layers = []
         for i in range(self.L):
             gated_layer_defn = {'M': self.M,
-                                'input_shape': prev_output_shape,
-                                'module_output_shape': self.tensor_shape,
+                                'hidden_size': self.hidden_size,
                                 'module_type': self.module_type,
                                 'sublayer_type': self.sublayer_type}
             gated_layer = GatedLayer(gated_layer_defn, gamma=self.gamma)
-            print('(graph)before shape', prev_output_shape)
-            prev_output_shape = gated_layer.layer_output_shape
-            print('(graph)after shape', prev_output_shape)
-
-
             self.gated_layers.append(gated_layer)
 
         output_layer_defn = {'M': 1,
-                             'input_shape': prev_output_shape,
-                             'module_output_shape': (None, self.C),
+                             'hidden_size': self.C,
                              'module_type': LinearModule,
                              'sublayer_type': IdentitySublayerModule}
         self.output_layer = OutputLayer(output_layer_defn)

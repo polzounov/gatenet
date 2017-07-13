@@ -11,8 +11,7 @@ class Layer():
     def __init__(self, layer_definition):
         # Todo 
         self.M = layer_definition['M']
-        self.input_shape = layer_definition.get('input_shape')
-        self.module_output_shape = layer_definition.get('module_output_shape')
+        self.hidden_size = layer_definition.get('hidden_size') # Also # of output channels
         # TODO: Make module type work with lists (for module variation inside layer)
         self.ModuleType = layer_definition.get('module_type')
         self.SublayerType = layer_definition.get('sublayer_type')
@@ -23,23 +22,21 @@ class Layer():
     def _build_modules(self):
         self.modules = np.zeros(self.M, dtype=object)
         for i in range(self.M):
-            self.modules[i] = self.ModuleType(self.input_shape, self.module_output_shape, activation=self.act)
+            self.modules[i] = self.ModuleType(self.hidden_size, activation=self.act)
 
     def _build_sublayer(self):
-        self.sublayer = self.SublayerType(self.module_output_shape, self.M)
-        self.layer_output_shape = self.sublayer.output_shape
+        self.sublayer = self.SublayerType(self.M)
 
 
 class GatedLayer(Layer):
     def __init__(self, layer_definition, gamma=2.0):
         super(GatedLayer, self).__init__(layer_definition)
-        self.gate_module = LinearModule(self.input_shape, (None, len(self.modules)))
+        self.gate_module = LinearModule(len(self.modules))
         self.gates = None
         self.gamma = gamma
 
     def compute_gates(self, input_tensors):
-        #####gates_unnormalized = self.gate_module.process_module(input_tensors)
-        gates_unnormalized = self.gate_module(input_tensors)#####
+        gates_unnormalized = self.gate_module(input_tensors)
         gates_pow = tf.pow(gates_unnormalized, self.gamma)
 
         gg = tf.reshape(tf.reduce_sum(gates_pow, axis = 1), [-1,1])
@@ -56,8 +53,7 @@ class GatedLayer(Layer):
 
         for i in range(len(self.modules)):
             # Get the number of rows in the fed value at run-time.
-            #####output_tensors[i] = self.modules[i].process_module(input_tensors)
-            output_tensors[i] = self.modules[i](input_tensors)#####
+            output_tensors[i] = self.modules[i](input_tensors)
             num_cols = np.int32(output_tensors[i].get_shape()[1])
 
             gg = tf.reshape(gates[:,i], [-1,1])
@@ -80,7 +76,6 @@ class OutputLayer(Layer):
     def process_layer(self, input_tensors):
         output_tensors = np.zeros(len(self.modules), dtype=object)
         for i in range(len(self.modules)):
-            #####output_tensors[i] = self.modules[i].process_module(input_tensors)
-            output_tensors[i] = self.modules[i](input_tensors)#####
+            output_tensors[i] = self.modules[i](input_tensors)
         return self.sublayer.process_sublayer(output_tensors)
 ######################################################################
