@@ -15,7 +15,7 @@ class ConvModule(snt.AbstractModule):
                  kernel_shape=3,
                  activation=tf.nn.relu,
                  name='conv_module'):
-        super(ConvModule, self).__init__(name=name)
+        super(ConvModule, self).__init__(name='name')
         #self._output_channels = output_channels
         self._output_channels = output_shape[-1] # last el is channels
         self._kernel_shape = kernel_shape
@@ -30,7 +30,7 @@ class ConvModule(snt.AbstractModule):
 class PerceptronModule(snt.AbstractModule):
     #def __init__(self, hidden_size, activation=tf.nn.relu, name='perceptron_module'):
     def __init__(self, output_shape, activation=tf.nn.relu, name='perceptron_module'):
-        super(PerceptronModule, self).__init__(name=name)
+        super(PerceptronModule, self).__init__(name='name')
         self._activation = activation
         #self._hidden_size = hidden_size
         self._hidden_size = output_shape[-1]
@@ -38,21 +38,28 @@ class PerceptronModule(snt.AbstractModule):
     def _build(self, inputs):
         with self._enter_variable_scope():
             perceptron = snt.Linear(output_size=self._hidden_size, name='perceptron')
-            return self._activation(perceptron(inputs))
+            return self._activation(perceptron(flatten(inputs)))
 
 
 class LinearModule(snt.AbstractModule):
     #def __init__(self, hidden_size, name='linear_module'):
     def __init__(self, output_shape, name='linear_module', activation=None):
-        super(LinearModule, self).__init__(name=name)
+        super(LinearModule, self).__init__(name='name')
         #self._hidden_size = hidden_size
         self._hidden_size = output_shape[-1]
 
     def _build(self, inputs):
         with self._enter_variable_scope():
             linear_unit = snt.Linear(output_size=self._hidden_size, name='linear_unit')
-            return linear_unit(inputs)
+            return linear_unit(flatten(inputs))
 
+def flatten(input_tensor):
+    '''Flatten the input to 2d if input is in 4d'''
+    if len(input_tensor.shape) == 2:
+        return input_tensor
+    N, H, W, C = input_tensor.get_shape().as_list()
+    input_tensor = tf.reshape(input_tensor, [-1, H*W*C])
+    return input_tensor
 ##############################################################################
 ## Code for Modules
 """
