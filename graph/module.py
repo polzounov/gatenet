@@ -42,7 +42,8 @@ class PerceptronModule(snt.AbstractModule):
 
 
 class LinearModule(snt.AbstractModule):
-    def __init__(self, hidden_size, name='linear_module'):
+    #def __init__(self, hidden_size, name='linear_module'):
+    def __init__(self, output_shape, name='linear_module', activation=None):
         super(LinearModule, self).__init__(name=name)
         #self._hidden_size = hidden_size
         self._hidden_size = output_shape[-1]
