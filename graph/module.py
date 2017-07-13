@@ -13,7 +13,7 @@ class ConvModule(snt.AbstractModule):
                  kernel_shape=3,
                  activation=tf.nn.relu,
                  name='conv_module'):
-        super(ConvModule, self).__init__(name='name')
+        super(ConvModule, self).__init__(name='conv_module')
         self._output_channels = output_channels
         self._kernel_shape = kernel_shape
         self._activation = activation
@@ -26,7 +26,7 @@ class ConvModule(snt.AbstractModule):
 
 class PerceptronModule(snt.AbstractModule):
     def __init__(self, hidden_size, activation=tf.nn.relu, name='perceptron_module'):
-        super(PerceptronModule, self).__init__(name='name')
+        super(PerceptronModule, self).__init__(name='perceptron_module')
         self._activation = activation
         self._hidden_size = hidden_size
 
@@ -38,7 +38,7 @@ class PerceptronModule(snt.AbstractModule):
 
 class LinearModule(snt.AbstractModule):
     def __init__(self, hidden_size, name='linear_module', activation=None):
-        super(LinearModule, self).__init__(name='name')
+        super(LinearModule, self).__init__(name='linear_module')
         self._hidden_size = hidden_size
 
     def _build(self, inputs):
