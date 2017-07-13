@@ -45,22 +45,32 @@ class GatedLayer(Layer):
         num_cols = len(self.modules)
         gates_tiled = tf.tile(gg, [1, num_cols])
 
-        gates_normalized = tf.nn.relu(gates_pow / gates_tiled)
-        self.gates = tf.nn.relu(gates_normalized) # CHANGE !!! self.gates == same thing
+        gates_normalized = tf.nn.relu(gates_pow / gates_tiled) # why relu?
         return gates_normalized
 
     def process_layer(self, input_tensors):
-        gates = self.compute_gates(input_tensors) # CHANGE !!! self.gates == same thing
-        output_tensors = np.zeros(len(self.modules), dtype=object)
+        gates = self.compute_gates(input_tensors)
+        output_tensors = np.zeros(self.M, dtype=object)
 
-        for i in range(len(self.modules)):
+        for i in range(self.M):
             # Get the number of rows in the fed value at run-time.
             output_tensors[i] = self.modules[i](input_tensors)
-            num_cols = np.int32(output_tensors[i].get_shape()[1])
+            tensor_shape = output_tensors[i].get_shape().as_list()
 
+            # Temporary fix - TODO: fix this properly
+            # if 4d / for convs - convert to 2d (to simplify gating)
+            if len(tensor_shape) == 4:
+                N,H,W,C = tensor_shape
+                output_tensors[i] = tf.reshape(output_tensors[i], [-1, H*W*C])
+
+            num_cols = np.int32(output_tensors[i].get_shape()[1])
             gg = tf.reshape(gates[:,i], [-1,1])
             gates_tiled = tf.tile(gg, [1,num_cols])
             output_tensors[i] = tf.multiply(output_tensors[i], gates_tiled)
+
+            # if 4d / for convs - convert back
+            if len(tensor_shape) == 4:
+                output_tensors[i] = tf.reshape(output_tensors[i], [-1, H, W, C])
 
         return self.sublayer.process_sublayer(output_tensors)
 

@@ -15,7 +15,7 @@ class Parameters:
 
         self.gamma = 2
         self.batch_size = 100
-        self.num_batches = 1001
+        self.num_batches = 101
         self.learning_rate = 0.001
         self.output_file = 'test'
 
