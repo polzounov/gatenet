@@ -33,7 +33,7 @@ class PerceptronModule(snt.AbstractModule):
     def _build(self, inputs):
         with self._enter_variable_scope():
             perceptron = snt.Linear(output_size=self._hidden_size, name='perceptron')
-            return self._activation(perceptron(inputs))
+            return self._activation(perceptron(flatten_to_2d(inputs)))
 
 
 class LinearModule(snt.AbstractModule):
@@ -44,7 +44,7 @@ class LinearModule(snt.AbstractModule):
     def _build(self, inputs):
         with self._enter_variable_scope():
             linear_unit = snt.Linear(output_size=self._hidden_size, name='linear_unit')
-            return linear_unit(inputs)
+            return linear_unit(flatten_to_2d(inputs))
 
 ##############################################################################
 ## Code for Modules

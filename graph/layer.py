@@ -75,6 +75,5 @@ class OutputLayer():
             self.module = LinearModule(hidden_size=self.C)
 
     def process_layer(self, input_tensors):
-        flattened_input = flatten_to_2d(input_tensors)
-        return self.module(flattened_input)
+        return self.module(input_tensors)
 ######################################################################
