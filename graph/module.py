@@ -8,86 +8,92 @@ import sonnet as snt
 ## Code for Sonnet Modules
 
 class ConvModule(snt.AbstractModule):
-  def __init__(self, kernal_shape,output_channels,activation, name="conv_module"):
-    super(ConvModule, self).__init__(name=name)
-    self._kernal_shape = kernal_shape
-    self._output_channels = output_channels
-    self._activation = activation
+    def __init__(self,
+                 output_channels,
+                 kernel_shape=3,
+                 activation=tf.nn.relu,
+                 name='conv_module'):
+        super(ConvModule, self).__init__(name='conv_module')
+        self._output_channels = output_channels
+        self._kernel_shape = kernel_shape
+        self._activation = activation
 
-  def _build(self, inputs):
-      with self._enter_variable_scope():
-          conv = snt.Conv2D(self._output_channels, self._kernal_shape)
-          return self._activation(conv(inputs))
-
+    def _build(self, inputs):
+        with self._enter_variable_scope():
+            conv = snt.Conv2D(self._output_channels, self._kernel_shape)
+            return self._activation(conv(inputs))
 
 
 class PerceptronModule(snt.AbstractModule):
-  def __init__(self, hidden_size, activation, name="perceptron_module"):
-      super(PerceptronModule, self).__init__(name=name)
-      self._activation = activation
-      self._hidden_size = hidden_size
+    def __init__(self, hidden_size, activation=tf.nn.relu, name='perceptron_module'):
+        super(PerceptronModule, self).__init__(name='perceptron_module')
+        self._activation = activation
+        self._hidden_size = hidden_size
 
-  def _build(self, inputs):
-      with self._enter_variable_scope():
-          perceptron = snt.Linear(output_size=self._hidden_size, name="perceptron")
-          return self._activation(perceptron(inputs))
+    def _build(self, inputs):
+        with self._enter_variable_scope():
+            perceptron = snt.Linear(output_size=self._hidden_size, name='perceptron')
+            return self._activation(perceptron(flatten_to_2d(inputs)))
 
 
 class LinearModule(snt.AbstractModule):
-  def __init__(self, hidden_size, name="linear_module"):
-      super(LinearModule, self).__init__(name=name)
-      self._hidden_size = hidden_size
+    def __init__(self, hidden_size, name='linear_module', activation=None):
+        super(LinearModule, self).__init__(name='linear_module')
+        self._hidden_size = hidden_size
 
-  def _build(self, inputs):
-      with self._enter_variable_scope():
-          linear_unit = snt.Linear(output_size=self._hidden_size, name="linear_unit")
-          return linear_unit(inputs)
+    def _build(self, inputs):
+        with self._enter_variable_scope():
+            linear_unit = snt.Linear(output_size=self._hidden_size, name='linear_unit')
+            return linear_unit(flatten_to_2d(inputs))
 
 ##############################################################################
 ## Code for Modules
 """
 ###### TEMPORARY CODE ########################################################
+def flatten_shape(shape):
+    N, H, W, C = shape
+    print('flattening', shape, ', to', (N, H*W*C))
+    return (N, H*W*C)
+
 def weight_helper(input_shape,
                   output_shape,
                   filters=(3,3)):
     '''Takes input shape and output shape, and decides the shapes of
     weights needed to convert from input to output shape
     '''
-    dims_in = len(input_shape)
-    dims_out = len(output_shape)
-    if dims_in != dims_out:
-        print('dims_in:', dims_in, ', dims_out:', dims_out)
-        raise ValueError('Input and output dimensions do not match, (reshape the input to 2d)')
-    if dims_in == 2:
+    if len(input_shape) == 2:
+        return (input_shape[1], output_shape[1])
+
+    if len(input_shape) != len(output_shape): # in/out dims don't match
+        input_shape = flatten_shape(input_shape)
+        if len(input_shape) != 2:
+            raise ValueError('Flatten did not work')
         return (input_shape[1], output_shape[1])
 
     # For the 4d (convolutional) case
-    N, W, H, C = input_shape
-    Nout, F, Wout, Hout = output_shape
-    HH, WW = filters
+    N, H, W, C = input_shape; Nout, Hout, Wout, F = output_shape; HH, WW = filters
     if N != Nout:
         raise ValueError('Number of input and output datapoints are different')
     return (HH, WW, C, F)
 
 
 def bias_helper(input_shape,
-                  output_shape,
-                  filters=(3,3)):
+                output_shape,
+                filters=(3,3)):
     '''Takes input shape and output shape, and decides the shapes of
-    biases needed to convert from input to output shape
+    weights needed to convert from input to output shape
     '''
-    dims_in = len(input_shape)
-    dims_out = len(output_shape)
-    if dims_in != dims_out:
-        print('dims_in:', dims_in, ', dims_out:', dims_out)
-        raise ValueError('Input and output dimensions do not match, (reshape the input to 2d)')
-    if dims_in == 2:
+    if len(input_shape) == 2:
+        return (output_shape[1],)
+
+    if len(input_shape) != len(output_shape): # in/out dims don't match
+        input_shape = flatten_shape(input_shape)
+        if len(input_shape) != 2:
+            raise ValueError('Flatten did not work')
         return (output_shape[1],)
 
     # For the 4d (convolutional) case
-    N, W, H, C = input_shape
-    Nout, F, Wout, Hout = output_shape
-    HH, WW = filters
+    N, H, W, C = input_shape; Nout, Hout, Wout, F = output_shape; HH, WW = filters
     if N != Nout:
         raise ValueError('Number of input and output datapoints are different')
     return (F,)
@@ -98,8 +104,14 @@ class Module():
     def __init__(self, input_shape, output_shape, activation):
         self.weights = weight_variable(weight_helper(input_shape, output_shape))
         self.biases = bias_variable(bias_helper(input_shape, output_shape))
-        print('self.weights.shape', self.weights.shape)
         self.activation = activation
+
+    def _flatten(self, input_tensor):
+        '''Flatten the input to 2d if input is in 4d'''
+        if len(input_tensor.shape) == 2:
+            return input_tensor
+        N, H, W, C = input_tensor.get_shape().as_list()
+        return tf.reshape(input_tensor, [-1, H*W*C])
 
 
 class PerceptronModule(Module):
@@ -108,6 +120,7 @@ class PerceptronModule(Module):
         super(PerceptronModule, self).__init__(input_shape, output_shape, activation)
 
     def process_module(self, input_tensor):
+        input_tensor = self._flatten(input_tensor)
         return self.activation(tf.matmul(input_tensor, self.weights) + self.biases)
 
 
@@ -118,6 +131,7 @@ class LinearModule(Module):
         # Ignore the activation function if given
 
     def process_module(self, input_tensor):
+        input_tensor = self._flatten(input_tensor)
         return tf.matmul(input_tensor, self.weights) + self.biases
 
 
