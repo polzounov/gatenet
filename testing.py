@@ -9,19 +9,18 @@ from graph.module import *
 
 class Parameters:
   def __init__(self):
-    self.M = 2
-    self.L = 1
     self.C = 10 # MNIST digits
-
-    self.module_type = ConvModule
     self.sublayer_type = AdditionSublayerModule
     self.hidden_size = 4 # Hidden size or # of conv filters
-
     self.gamma = 2
     self.batch_size = 100
     self.num_batches = 101
     self.learning_rate = 0.001
     self.output_file = 'test'
+
+    self.M = 2
+    self.L = 2
+    self.module_type = ConvModule
 
 class OutputManager:
   def __init__(self):
