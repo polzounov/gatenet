@@ -20,9 +20,10 @@ class Graph():
         self.L = parameter_dict['L'] # Number of layers
         self.C = parameter_dict['C'] # Number of output classes
         self.gamma = parameter_dict['gamma'] # Strength of gating
-        self.tensor_shape = parameter_dict['tensor_shape']
         self.module_type = parameter_dict['module_type']
         self.sublayer_type = parameter_dict['sublayer_type']
+
+        self.hidden_size = parameter_dict['hidden_size']
 
         # Build new graph
         self.build_graph()
@@ -30,25 +31,17 @@ class Graph():
 
     def build_graph(self):
         ## Define Layers #####################################################
-        prev_output_shape = 784 # Image size (first input)
         self.gated_layers = []
         for i in range(self.L):
-            gated_layer_defn = {'M': self.M,
-                                'input_shape': prev_output_shape,
-                                'module_output_shape': self.tensor_shape,
-                                'module_type': self.module_type,
-                                'sublayer_type': self.sublayer_type}
-            gated_layer = GatedLayer(gated_layer_defn, self.gamma)
-            prev_output_shape = gated_layer.layer_output_shape
-
-            self.gated_layers.append(gated_layer)
-
-        output_layer_defn = {'M': 1,
-                             'input_shape': prev_output_shape,
-                             'module_output_shape': self.C,
-                             'module_type': LinearModule,
-                             'sublayer_type': AdditionSublayerModule}
-        self.output_layer = GatedLayer(output_layer_defn, gamma=0)
+            with tf.variable_scope('gated_layer_'+str(i)):
+                gated_layer_defn = {'M': self.M,
+                                    'hidden_size': self.hidden_size,
+                                    'module_type': self.module_type,
+                                    'sublayer_type': self.sublayer_type}
+                gated_layer = GatedLayer(gated_layer_defn, gamma=self.gamma)
+                self.gated_layers.append(gated_layer)
+            with tf.variable_scope('output_layer'):
+                self.output_layer = OutputLayer(C=self.C)
         ######################################################################
 
 
@@ -67,6 +60,7 @@ class Graph():
         '''Output the values of the gates for image'''
         gates = np.zeros((self.L, self.M))
         for i in range(len(self.gated_layers)):
+            im = np.reshape(image, [28, 28])
             g = sess.run([self.gated_layers[i].gates],
                          feed_dict={x:image})
             gates[i] = np.array(g)

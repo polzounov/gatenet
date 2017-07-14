@@ -27,7 +27,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   sess = tf.InteractiveSession()
 
   # Input placeholders
-  x = tf.placeholder(tf.float32, [None, 784], name='x-input')
+  x = tf.placeholder(tf.float32, [None, 28, 28, 1], name='x-input')
   y_ = tf.placeholder(tf.float32, [None, 10], name='y-input')
 
   # Build computation graph
@@ -63,6 +63,8 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
     tr_data = tr_data[elems,:]
     tr_label = tr_label[elems,:]
 
+    tr_data = np.reshape(tr_data, (-1,28,28,1))
+
     if len(tr_data) < 50:
       continue
 
@@ -81,7 +83,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   outputManager.initialize(parameter_dict)
   # Compute gate vectors
   for i in range(len(tr_label)):
-    image = np.reshape(tr_data[i,:], (1, 28 * 28))
+    image = np.reshape(tr_data[i,:], (1,28, 28,1))
     output_image = np.reshape(image,(28,28))
     gates = graph.determine_gates(image, x, sess)
     outputManager.addData(gates, np.argmax(tr_label[i]), output_image)
@@ -97,7 +99,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   features_output_manager.initialize(features_param_dict)
   # Compute the features (y)
   for i in range(len(tr_label)):
-    image = np.reshape(tr_data[i,:], (1, 28 * 28))
+    image = np.reshape(tr_data[i,:], (1,28, 28,1))
     output_image = np.reshape(image, (28, 28))
     pred = sess.run(y, feed_dict={x: image})
     features_output_manager.addData(pred, np.argmax(tr_label[i]), output_image)
@@ -113,7 +115,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   predictions_output_manager.initialize(predictions_param_dict)
   # Compute predictions
   for i in range(len(tr_label)):
-    image = np.reshape(tr_data[i,:], (1, 28 * 28))
+    image = np.reshape(tr_data[i,:], (1,28, 28,1))
     output_image = np.reshape(image, (28, 28))
     pred = sess.run(predictions, feed_dict={x: image})
     predictions_output_manager.addData(pred, np.argmax(tr_label[i]), output_image)

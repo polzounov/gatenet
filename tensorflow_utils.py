@@ -1,5 +1,12 @@
 import tensorflow as tf
 
+def flatten_to_2d(input_tensor):
+    '''Flatten the input to 2d if input is in 4d'''
+    if len(input_tensor.shape) == 2:
+        return input_tensor
+    N, H, W, C = input_tensor.get_shape().as_list()
+    input_tensor = tf.reshape(input_tensor, [-1, H*W*C])
+    return input_tensor
 
 def weight_variable(shape):
   """Create a weight variable with appropriate initialization."""

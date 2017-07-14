@@ -5,17 +5,19 @@ from graph.module import *
 
 class Parameters:
     def __init__(self):
-        self.M = 3
-        self.L = 5
+        self.M = 2
+        self.L = 1
         self.C = 10 # MNIST digits
-        self.tensor_shape = 20
+
+        self.module_type = PerceptronModule
+        self.sublayer_type = AdditionSublayerModule
+        self.hidden_size = 20 # Hidden size or # of conv filters
+
         self.gamma = 2
         self.batch_size = 100
-        self.num_batches = 1001
+        self.num_batches = 101
         self.learning_rate = 0.001
         self.output_file = 'test'
-        self.module_type = PerceptronModule
-        self.sublayer_type = ConcatenationSublayerModule
 
 class OutputManager:
 
