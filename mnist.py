@@ -83,7 +83,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   outputManager.initialize(parameter_dict)
   # Compute gate vectors
   for i in range(len(tr_label)):
-    image = np.reshape(tr_data[i,:], (1, 28 * 28))
+    image = np.reshape(tr_data[i,:], (1,28, 28,1))
     output_image = np.reshape(image,(28,28))
     gates = graph.determine_gates(image, x, sess)
     outputManager.addData(gates, np.argmax(tr_label[i]), output_image)
@@ -99,7 +99,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   features_output_manager.initialize(features_param_dict)
   # Compute the features (y)
   for i in range(len(tr_label)):
-    image = np.reshape(tr_data[i,:], (1, 28 * 28))
+    image = np.reshape(tr_data[i,:], (1,28, 28,1))
     output_image = np.reshape(image, (28, 28))
     pred = sess.run(y, feed_dict={x: image})
     features_output_manager.addData(pred, np.argmax(tr_label[i]), output_image)
@@ -115,7 +115,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   predictions_output_manager.initialize(predictions_param_dict)
   # Compute predictions
   for i in range(len(tr_label)):
-    image = np.reshape(tr_data[i,:], (1, 28 * 28))
+    image = np.reshape(tr_data[i,:], (1,28, 28,1))
     output_image = np.reshape(image, (28, 28))
     pred = sess.run(predictions, feed_dict={x: image})
     predictions_output_manager.addData(pred, np.argmax(tr_label[i]), output_image)
