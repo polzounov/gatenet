@@ -26,6 +26,11 @@ class Parameters:
             self.L = 3
             self.M = 2
             self.module_type = ConvModule
+    
+    ******************************************************
+    NOTE: (*** IMPORTANT ***)
+    When using the graph_structure definition, make sure
+    that all layers have the same number of modules!
     '''
     self.C = 10 # MNIST digits
     self.sublayer_type = AdditionSublayerModule
