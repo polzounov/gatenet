@@ -5,7 +5,7 @@ from __future__ import print_function
 import numpy as np
 import preprocessing
 import tensorflow as tf
-from parameters import Parameters
+from testing import Parameters
 from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
 
 def get_next_batch():
