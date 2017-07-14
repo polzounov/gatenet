@@ -13,10 +13,10 @@ from graph.module import *
 ## Code for Layers
 class Layer():
   def __init__(self, layer_definition):
-    self.M = layer_definition['M']
+    self.layer_structure = layer_definition.get('layer_structure')
+    self.M = len(self.layer_structure)
+
     self.hidden_size = layer_definition.get('hidden_size') # Also # of output channels
-    # TODO: Make module type work with lists (for module variation inside layer)
-    self.ModuleType = layer_definition.get('module_type')
     self.SublayerType = layer_definition.get('sublayer_type')
     self.act = layer_definition.get('activations', tf.nn.relu)
     self._build_modules() # Init modules in layer
@@ -26,7 +26,8 @@ class Layer():
     self.modules = np.zeros(self.M, dtype=object)
     for i in range(self.M):
       with tf.variable_scope('module_'+str(i)):
-        self.modules[i] = self.ModuleType(self.hidden_size, activation=self.act)
+        ModuleType = self.layer_structure[i]
+        self.modules[i] = ModuleType(self.hidden_size, activation=self.act)
 
   def _build_sublayer(self):
     with tf.variable_scope('sublayer'):
