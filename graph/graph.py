@@ -60,7 +60,6 @@ class Graph():
         '''Output the values of the gates for image'''
         gates = np.zeros((self.L, self.M))
         for i in range(len(self.gated_layers)):
-            im = np.reshape(image, [28, 28])
             g = sess.run([self.gated_layers[i].gates],
                          feed_dict={x:image})
             gates[i] = np.array(g)
