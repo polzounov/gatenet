@@ -7,6 +7,8 @@ from graph.layer import *
 from graph.sublayer import *
 from graph.module import *
 
+#from matplotlib import pyplot as plt
+
 ##############################################################################
 ## Code for Gatenet Graph construction
 class Graph():
@@ -60,6 +62,9 @@ class Graph():
         '''Output the values of the gates for image'''
         gates = np.zeros((self.L, self.M))
         for i in range(len(self.gated_layers)):
+            im = np.reshape(image, [28, 28])
+            #plt.imshow(im)
+            #plt.show()
             g = sess.run([self.gated_layers[i].gates],
                          feed_dict={x:image})
             gates[i] = np.array(g)

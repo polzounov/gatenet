@@ -33,7 +33,7 @@ class GatedLayer(Layer):
     def __init__(self, layer_definition, gamma=2.0):
         super(GatedLayer, self).__init__(layer_definition)
         with tf.variable_scope('gates'):
-            self.gate_module = LinearModule(len(self.modules))
+            self.gate_module = LinearModule(self.M)
         self.gates = None
         self.gamma = gamma
 
@@ -46,6 +46,7 @@ class GatedLayer(Layer):
         gates_tiled = tf.tile(gg, [1, num_cols])
 
         gates_normalized = tf.nn.relu(gates_pow / gates_tiled) # why relu?
+        self.gates = gates_normalized
         return gates_normalized
 
     def process_layer(self, input_tensors):

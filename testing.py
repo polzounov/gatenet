@@ -9,9 +9,9 @@ class Parameters:
         self.L = 1
         self.C = 10 # MNIST digits
 
-        self.module_type = ConvModule
+        self.module_type = PerceptronModule
         self.sublayer_type = AdditionSublayerModule
-        self.hidden_size = 2 # Hidden size or # of conv filters
+        self.hidden_size = 20 # Hidden size or # of conv filters
 
         self.gamma = 2
         self.batch_size = 100
