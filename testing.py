@@ -11,15 +11,15 @@ class Parameters:
   def __init__(self):
     self.C = 10 # MNIST digits
     self.sublayer_type = AdditionSublayerModule
-    self.hidden_size = 4 # Hidden size or # of conv filters
+    self.hidden_size = 2 # Hidden size or # of conv filters
     self.gamma = 2
     self.batch_size = 100
-    self.num_batches = 101
+    self.num_batches = 201
     self.learning_rate = 0.001
     self.output_file = 'test'
 
-    self.M = 2
-    self.L = 2
+    self.M = 3
+    self.L = 3
     self.module_type = ConvModule
 
 class OutputManager:
