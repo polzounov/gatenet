@@ -41,7 +41,7 @@ class Graph():
     self.gated_layers = []
 
     for i in range(self.L):
-      with tf.variable_scope('gated_layer_'+str(i)):
+      with tf.name_scope('gated_layer_'+str(i)):
         layer_structure = self.graph_structure[i] # List of modules
         gated_layer_defn = {'layer_structure': layer_structure,
                             'hidden_size': self.hidden_size,
@@ -49,7 +49,7 @@ class Graph():
         gated_layer = GatedLayer(gated_layer_defn, gamma=self.gamma)
         self.gated_layers.append(gated_layer)
 
-    with tf.variable_scope('output_layer'):
+    with tf.name_scope('output_layer'):
       self.output_layer = OutputLayer(C=self.C)
 
   def _graph_structure(self, parameter_dict):

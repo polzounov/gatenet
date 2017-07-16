@@ -25,19 +25,19 @@ class Layer():
   def _build_modules(self):
     self.modules = np.zeros(self.M, dtype=object)
     for i in range(self.M):
-      with tf.variable_scope('module_'+str(i)):
+      with tf.name_scope('module_'+str(i)):
         ModuleType = self.layer_structure[i]
         self.modules[i] = ModuleType(self.hidden_size, activation=self.act)
 
   def _build_sublayer(self):
-    with tf.variable_scope('sublayer'):
+    with tf.name_scope('sublayer'):
       self.sublayer = self.SublayerType(self.M)
 
 
 class GatedLayer(Layer):
   def __init__(self, layer_definition, gamma=2.0):
     super(GatedLayer, self).__init__(layer_definition)
-    with tf.variable_scope('gates'):
+    with tf.name_scope('gates'):
       self.gate_module = LinearModule(self.M)
     self.gates = None
     self.gamma = gamma
@@ -87,7 +87,7 @@ class OutputLayer():
     self._build() # Init
 
   def _build(self):
-    with tf.variable_scope('module'):
+    with tf.name_scope('module'):
       self.module = LinearModule(hidden_size=self.C)
 
   def process_layer(self, input_tensors):
