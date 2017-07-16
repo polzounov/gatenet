@@ -49,6 +49,9 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   # Initialize Variables
   tf.global_variables_initializer().run()
 
+  writer = tf.summary.FileWriter('./logs', graph=tf.get_default_graph())
+  #Command to run: tensorboard --logdir=logs
+
   for i in range(parameter_dict['num_batches']):
     tr_data, tr_label = mnist.train.next_batch(parameter_dict['batch_size'])
 

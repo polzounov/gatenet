@@ -37,7 +37,7 @@ class Parameters:
     self.hidden_size = 2 # Hidden size or # of conv filters
     self.gamma = 2
     self.batch_size = 100
-    self.num_batches = 201
+    self.num_batches = 21
     self.learning_rate = 0.001
     self.output_file = 'test'
 
