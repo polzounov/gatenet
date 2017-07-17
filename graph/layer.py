@@ -3,42 +3,43 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import sonnet as snt
 import numpy as np
 #from parameters import Parameters
 from tensorflow_utils import *
-
 from graph.module import *
 
 ######################################################################
 ## Code for Layers
-class Layer():
-  def __init__(self, layer_definition):
+class Layer(snt.AbstractModule):
+  def __init__(self, layer_definition, layer_name):
+    super(Layer, self).__init__(name=layer_name)
     self.layer_structure = layer_definition.get('layer_structure')
     self.M = len(self.layer_structure)
 
     self.hidden_size = layer_definition.get('hidden_size') # Also # of output channels
     self.SublayerType = layer_definition.get('sublayer_type')
     self.act = layer_definition.get('activations', tf.nn.relu)
-    self._build_modules() # Init modules in layer
-    self._build_sublayer()
+    self._init() # Init modules and sublayer in layer
 
-  def _build_modules(self):
-    self.modules = np.zeros(self.M, dtype=object)
-    for i in range(self.M):
-      with tf.variable_scope('module_'+str(i)):
+  def _init(self):
+    with self._enter_variable_scope():
+      # Init modules
+      self.modules = np.zeros(self.M, dtype=object)
+      for i in range(self.M):
         ModuleType = self.layer_structure[i]
-        self.modules[i] = ModuleType(self.hidden_size, activation=self.act)
-
-  def _build_sublayer(self):
-    with tf.name_scope('sublayer'):
-      self.sublayer = self.SublayerType(self.M)
+        self.modules[i] = ModuleType(self.hidden_size,
+                                     activation=self.act,
+                                     module_name='module_'+str(i))
+      # Init sublayer
+      self.sublayer = self.SublayerType(self.M, sublayer_name='sublayer')
 
 
 class GatedLayer(Layer):
-  def __init__(self, layer_definition, gamma=2.0):
-    super(GatedLayer, self).__init__(layer_definition)
-    with tf.variable_scope('gates'):
-      self.gate_module = LinearModule(self.M)
+  def __init__(self, layer_definition, gamma=2.0, layer_name='gated_layer'):
+    super(GatedLayer, self).__init__(layer_definition, layer_name=layer_name)
+    with self._enter_variable_scope():
+      self.gate_module = LinearModule(self.M, module_name='gates')
     self.gates = None
     self.gamma = gamma
 
@@ -54,7 +55,7 @@ class GatedLayer(Layer):
     self.gates = gates_normalized
     return gates_normalized
 
-  def process_layer(self, input_tensors):
+  def _build(self, input_tensors):
     gates = self.compute_gates(input_tensors)
     output_tensors = np.zeros(self.M, dtype=object)
 
@@ -78,18 +79,19 @@ class GatedLayer(Layer):
       if len(tensor_shape) == 4:
         output_tensors[i] = tf.reshape(output_tensors[i], [-1, H, W, C])
 
-    return self.sublayer.process_sublayer(output_tensors)
+    return self.sublayer(output_tensors)
 
 
-class OutputLayer():
-  def __init__(self, C=10):
+class OutputLayer(snt.AbstractModule):
+  def __init__(self, C=10, layer_name='output_layer'):
+    super(OutputLayer, self).__init__(name=layer_name)
     self.C = C
-    self._build() # Init
+    self._init() # Init
 
-  def _build(self):
-    with tf.variable_scope('module'):
-      self.module = LinearModule(hidden_size=self.C)
+  def _init(self):
+    with self._enter_variable_scope():
+      self.module = LinearModule(hidden_size=self.C, module_name='module')
 
-  def process_layer(self, input_tensors):
+  def _build(self, input_tensors):
     return self.module(input_tensors)
 ######################################################################

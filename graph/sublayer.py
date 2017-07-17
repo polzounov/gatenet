@@ -3,23 +3,24 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import sonnet as snt
 import numpy as np
-#from parameters import Parameters
 from tensorflow_utils import *
 
 ######################################################################
 ## Code for Sublayer
-class Sublayer():
-  def __init__(self, num_modules):
+class Sublayer(snt.AbstractModule):
+  def __init__(self, num_modules, sublayer_name):
+    super(Sublayer, self).__init__(name=sublayer_name)
     self.num_modules = num_modules
 
 
 class AdditionSublayerModule(Sublayer):
   '''Averages the values of the sublayer (assume inputs are same size)'''
-  def __init__(self, num_modules):
-    super(AdditionSublayerModule, self).__init__(num_modules)
+  def __init__(self, num_modules, sublayer_name='sublayer'):
+    super(AdditionSublayerModule, self).__init__(num_modules, sublayer_name)
 
-  def process_sublayer(self, module_tensors):
+  def _build(self, module_tensors):
     return np.sum(module_tensors) / self.num_modules
 
 """
@@ -39,11 +40,11 @@ class ConcatenationSublayerModule(Sublayer):
 
 class IdentitySublayerModule(Sublayer):
   '''Returns input (can only be one input!)'''
-  def __init__(self, num_modules):
-    super(IdentitySublayerModule, self).__init__(num_modules)
+  def __init__(self, num_modules, sublayer_name='sublayer'):
+    super(IdentitySublayerModule, self).__init__(num_modules, sublayer_name)
     if self.num_modules is not 1:
       print('self.num_modules: ', self.num_modules)
       raise ValueError('Incorrect number of modules for IdentitySublayerModule, should be 1')
 
-  def process_sublayer(self, module_tensors):
+  def _build(self, module_tensors):
     return module_tensors

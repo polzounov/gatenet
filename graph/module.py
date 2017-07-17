@@ -5,7 +5,6 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 import sonnet as snt
-#from parameters import Parameters
 from tensorflow_utils import *
 
 import sonnet as snt
@@ -23,8 +22,7 @@ class ConvModule(snt.AbstractModule):
     self._activation = activation
 
   def _build(self, inputs):
-    with self._enter_variable_scope():
-      conv = snt.Conv2D(self._output_channels, self._kernel_shape, name='snt_conv_2d')
+    conv = snt.Conv2D(self._output_channels, self._kernel_shape, name='snt_conv_2d')
     return self._activation(conv(inputs))
 
 
@@ -38,8 +36,7 @@ class PerceptronModule(snt.AbstractModule):
     self._hidden_size = hidden_size
 
   def _build(self, inputs):
-    with self._enter_variable_scope():
-      perceptron = snt.Linear(output_size=self._hidden_size, name='snt_perceptron')
+    perceptron = snt.Linear(output_size=self._hidden_size, name='snt_perceptron')
     return self._activation(perceptron(flatten_to_2d(inputs)))
 
 
@@ -52,6 +49,5 @@ class LinearModule(snt.AbstractModule):
     self._hidden_size = hidden_size
 
   def _build(self, inputs):
-    with self._enter_variable_scope():
-      linear_unit = snt.Linear(output_size=self._hidden_size, name='snt_linear_unit')
+    linear_unit = snt.Linear(output_size=self._hidden_size, name='snt_linear_unit')
     return linear_unit(flatten_to_2d(inputs))

@@ -41,16 +41,14 @@ class Graph():
     self.gated_layers = []
 
     for i in range(self.L):
-      with tf.variable_scope('gated_layer_'+str(i)):
-        layer_structure = self.graph_structure[i] # List of modules
-        gated_layer_defn = {'layer_structure': layer_structure,
-                            'hidden_size': self.hidden_size,
-                            'sublayer_type': self.sublayer_type}
-        gated_layer = GatedLayer(gated_layer_defn, gamma=self.gamma)
-        self.gated_layers.append(gated_layer)
+      layer_structure = self.graph_structure[i] # List of modules
+      gated_layer_defn = {'layer_structure': layer_structure,
+                          'hidden_size': self.hidden_size,
+                          'sublayer_type': self.sublayer_type}
+      gated_layer = GatedLayer(gated_layer_defn, gamma=self.gamma, layer_name='gated_layer'+str(i))
+      self.gated_layers.append(gated_layer)
 
-    with tf.variable_scope('output_layer'):
-      self.output_layer = OutputLayer(C=self.C)
+    self.output_layer = OutputLayer(C=self.C, layer_name='output_layer')
 
   def _graph_structure(self, parameter_dict):
     '''Take the given parameter dictionary and '''
@@ -87,8 +85,8 @@ class Graph():
     '''Return the output of graph based off of input_images'''
     next_input = input_images
     for i in range(self.L):
-      next_input = self.gated_layers[i].process_layer(next_input)
-    logits = self.output_layer.process_layer(next_input)
+      next_input = self.gated_layers[i](next_input)
+    logits = self.output_layer(next_input)
     return logits
 
 
