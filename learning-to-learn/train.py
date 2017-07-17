@@ -35,11 +35,11 @@ logging = tf.logging
 FLAGS = flags.FLAGS
 flags.DEFINE_string("save_path", None, "Path for saved meta-optimizer.")
 flags.DEFINE_integer("num_epochs", 10000, "Number of training epochs.")
-flags.DEFINE_integer("log_period", 100, "Log period.")
+flags.DEFINE_integer("log_period", 1, "Log period.")
 flags.DEFINE_integer("evaluation_period", 1000, "Evaluation period.")
 flags.DEFINE_integer("evaluation_epochs", 20, "Number of evaluation epochs.")
 
-flags.DEFINE_string("problem", "simple", "Type of problem.")
+flags.DEFINE_string("problem", "gatenet", "Type of problem.")
 flags.DEFINE_integer("num_steps", 100,
                      "Number of optimization steps per epoch.")
 flags.DEFINE_integer("unroll_length", 20, "Meta-optimizer unroll length.")

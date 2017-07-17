@@ -97,6 +97,13 @@ def get_config(problem_name, path=None):
     problem = problems.mnist(layers=(20,), mode=mode)
     net_config = {"cw": get_default_net_config("cw", path)}
     net_assignments = None
+
+
+  elif problem_name == "gatenet":
+    problem = problems.gatenet()
+    net_config = {"cw": get_default_net_config("cw", path)}
+    net_assignments = None
+
   elif problem_name == "cifar":
     mode = "train" if path is None else "test"
     problem = problems.cifar10("cifar10",
