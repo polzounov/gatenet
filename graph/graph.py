@@ -37,18 +37,19 @@ class Graph():
     self._build_graph()
 
   def _build_graph(self):
-    ## Define Layers
-    self.gated_layers = []
+    with tf.variable_scope('init_graph'):
+      ## Define Layers
+      self.gated_layers = []
 
-    for i in range(self.L):
-      layer_structure = self.graph_structure[i] # List of modules
-      gated_layer_defn = {'layer_structure': layer_structure,
-                          'hidden_size': self.hidden_size,
-                          'sublayer_type': self.sublayer_type}
-      gated_layer = GatedLayer(gated_layer_defn, gamma=self.gamma, layer_name='gated_layer'+str(i))
-      self.gated_layers.append(gated_layer)
+      for i in range(self.L):
+        layer_structure = self.graph_structure[i] # List of modules
+        gated_layer_defn = {'layer_structure': layer_structure,
+                            'hidden_size': self.hidden_size,
+                            'sublayer_type': self.sublayer_type}
+        gated_layer = GatedLayer(gated_layer_defn, gamma=self.gamma, layer_name='gated_layer'+str(i))
+        self.gated_layers.append(gated_layer)
 
-    self.output_layer = OutputLayer(C=self.C, layer_name='output_layer')
+      self.output_layer = OutputLayer(C=self.C, layer_name='output_layer')
 
   def _graph_structure(self, parameter_dict):
     '''Take the given parameter dictionary and '''
@@ -82,12 +83,13 @@ class Graph():
       raise ValueError('The given graph definition is unsupported')
 
   def return_logits(self, input_images):
-    '''Return the output of graph based off of input_images'''
-    next_input = input_images
-    for i in range(self.L):
-      next_input = self.gated_layers[i](next_input)
-    logits = self.output_layer(next_input)
-    return logits
+    with tf.name_scope('run_graph'):
+      '''Return the output of graph based off of input_images'''
+      next_input = input_images
+      for i in range(self.L):
+        next_input = self.gated_layers[i](next_input)
+      logits = self.output_layer(next_input)
+      return logits
 
 
   def determine_gates(self, image, x, sess):
