@@ -60,6 +60,22 @@ def get_default_net_config(name, path):
   }
 
 
+
+def get_module_net_config(name, path):
+  return {
+      "net": "ModuleWiseDeepLSTM",
+      "net_options": {
+          "layers": (20, 20),
+          "preprocess_name": "LogAndSign",
+          "preprocess_options": {"k": 5},
+          "scale": 0.01,
+      },
+      "net_path": get_net_path(name, path)
+  }
+
+
+
+
 def get_config(problem_name, path=None):
   """Returns problem configuration."""
   if problem_name == "simple":
@@ -101,7 +117,7 @@ def get_config(problem_name, path=None):
 
   elif problem_name == "gatenet":
     problem = problems.gatenet()
-    net_config = {"cw": get_default_net_config("cw", path)}
+    net_config = {"cw": get_module_net_config("cw", path)}
     net_assignments = None
 
   elif problem_name == "cifar":

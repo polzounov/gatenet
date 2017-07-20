@@ -218,6 +218,79 @@ class StandardDeepLSTM(Network):
     return self._rnn.initial_state(batch_size, **kwargs)
 
 
+
+
+
+
+
+##############################################################################
+##############################################################################
+##############################################################################
+##############################################################################
+##############################################################################
+##############################################################################
+# Module Wise Parameter Sharing
+
+
+class ModuleWiseDeepLSTM(StandardDeepLSTM):
+  """Module-wise `DeepLSTM`."""
+
+  def __init__(self, name="mw_deep_lstm", **kwargs):
+    """Creates an instance of `CoordinateWiseDeepLSTM`.
+
+    Args:
+      name: Module name.
+      **kwargs: Additional `DeepLSTM` args.
+    """
+    super(ModuleWiseDeepLSTM, self).__init__(1, name=name, **kwargs)
+
+  def _reshape_inputs(self, inputs):
+    return tf.reshape(inputs, [-1, 1])
+
+  def _build(self, inputs, prev_state):
+    """Connects the CoordinateWiseDeepLSTM module into the graph.
+
+    Args:
+      inputs: Arbitrarily shaped `Tensor`.
+      prev_state: `DeepRNN` state.
+
+    Returns:
+      `Tensor` shaped as `inputs`.
+    """
+
+    input_shape = inputs.get_shape().as_list()
+    print(input_shape)
+    reshaped_inputs = self._reshape_inputs(inputs)
+
+    build_fn = super(ModuleWiseDeepLSTM, self)._build
+    output, next_state = build_fn(reshaped_inputs, prev_state)
+
+    # Recover original shape.
+    return tf.reshape(output, input_shape), next_state
+
+  def initial_state_for_inputs(self, inputs, **kwargs):
+    reshaped_inputs = self._reshape_inputs(inputs)
+    return super(ModuleWiseDeepLSTM, self).initial_state_for_inputs(
+        reshaped_inputs, **kwargs)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CoordinateWiseDeepLSTM(StandardDeepLSTM):
   """Coordinate-wise `DeepLSTM`."""
 
@@ -256,6 +329,39 @@ class CoordinateWiseDeepLSTM(StandardDeepLSTM):
     reshaped_inputs = self._reshape_inputs(inputs)
     return super(CoordinateWiseDeepLSTM, self).initial_state_for_inputs(
         reshaped_inputs, **kwargs)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class KernelDeepLSTM(StandardDeepLSTM):
