@@ -34,20 +34,26 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   graph = Graph(parameter_dict)
   y = graph.return_logits(x)
 
+  with tf.name_scope('softmax_predictions'):
+    predictions = tf.nn.softmax(y)
   # Cross Entropy
-  diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
-  predictions = tf.nn.softmax(y)
-  cross_entropy = tf.reduce_mean(diff)
+  with tf.name_scope('cross_entropy'):
+    diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
+    cross_entropy = tf.reduce_mean(diff)
 
   # GradientDescent
   train_step = tf.train.AdamOptimizer(parameter_dict['learning_rate']).minimize(cross_entropy)
 
   # Accuracy
-  correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-  accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+  with tf.name_scope('accuracy'):
+    correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
   # Initialize Variables
   tf.global_variables_initializer().run()
+
+  writer = tf.summary.FileWriter('./logs', graph=tf.get_default_graph())
+  #Command to run: tensorboard --logdir=logs
 
   for i in range(parameter_dict['num_batches']):
     tr_data, tr_label = mnist.train.next_batch(parameter_dict['batch_size'])

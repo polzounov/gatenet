@@ -26,7 +26,7 @@ from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import sonnet as snt
 import tensorflow as tf
-
+from mnist import *
 from tensorflow.contrib.learn.python.learn.datasets import mnist as mnist_dataset
 
 
@@ -172,6 +172,51 @@ def mnist(layers,  # pylint: disable=invalid-name
     return _xent_loss(output, batch_labels)
 
   return build
+
+
+
+
+
+
+
+
+
+def gatenet(batch_size=128,
+          mode="train"):
+
+  # Data.
+  data = mnist_dataset.load_mnist()
+  data = getattr(data, mode)
+  images = tf.constant(data.images, dtype=tf.float32, name="MNIST_images")
+  images = tf.reshape(images, [-1, 28, 28, 1])
+  labels = tf.constant(data.labels, dtype=tf.int64, name="MNIST_labels")
+
+  # Network.
+  parameter_dict = Parameters().__dict__
+
+  # Build computation graph
+  graph = Graph(parameter_dict)
+
+  def build():
+    indices = tf.random_uniform([batch_size], 0, data.num_examples, tf.int64)
+    batch_images = tf.gather(images, indices)
+    batch_labels = tf.gather(labels, indices)
+    output = graph.return_logits(batch_images)
+    return _xent_loss(output, batch_labels)
+
+  return build
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 CIFAR10_URL = "http://www.cs.toronto.edu/~kriz"

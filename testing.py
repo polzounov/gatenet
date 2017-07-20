@@ -26,13 +26,18 @@ class Parameters:
             self.L = 3
             self.M = 2
             self.module_type = ConvModule
+    
+    ******************************************************
+    NOTE: (*** IMPORTANT ***)
+    When using the graph_structure definition, make sure
+    that all layers have the same number of modules!
     '''
     self.C = 10 # MNIST digits
     self.sublayer_type = AdditionSublayerModule
     self.hidden_size = 2 # Hidden size or # of conv filters
     self.gamma = 2
     self.batch_size = 100
-    self.num_batches = 201
+    self.num_batches = 21
     self.learning_rate = 0.001
     self.output_file = 'test'
 
