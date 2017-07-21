@@ -223,10 +223,7 @@ class StandardDeepLSTM(Network):
 
 
 
-##############################################################################
-##############################################################################
-##############################################################################
-##############################################################################
+#########################################################################################################
 ##############################################################################
 ##############################################################################
 # Module Wise Parameter Sharing
@@ -259,8 +256,11 @@ class ModuleWiseDeepLSTM(StandardDeepLSTM):
     """
 
     input_shape = inputs.get_shape().as_list()
-    print(input_shape)
+    print('Building ModuleWiseDeepLSTM:')
+    print('\t- input_shape   :', input_shape)
     reshaped_inputs = self._reshape_inputs(inputs)
+    reshaped_shape = reshaped_inputs.get_shape().as_list()
+    print('\t- reshaped_shape:', reshaped_shape)
 
     build_fn = super(ModuleWiseDeepLSTM, self)._build
     output, next_state = build_fn(reshaped_inputs, prev_state)
@@ -274,21 +274,7 @@ class ModuleWiseDeepLSTM(StandardDeepLSTM):
         reshaped_inputs, **kwargs)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#########################################################################################################
 
 
 class CoordinateWiseDeepLSTM(StandardDeepLSTM):
@@ -317,7 +303,11 @@ class CoordinateWiseDeepLSTM(StandardDeepLSTM):
       `Tensor` shaped as `inputs`.
     """
     input_shape = inputs.get_shape().as_list()
+    print('Building ModuleWiseDeepLSTM:')
+    print('\t- input_shape   :', input_shape)
     reshaped_inputs = self._reshape_inputs(inputs)
+    reshaped_shape = reshaped_inputs.get_shape().as_list()
+    print('\t- reshaped_shape:', reshaped_shape)
 
     build_fn = super(CoordinateWiseDeepLSTM, self)._build
     output, next_state = build_fn(reshaped_inputs, prev_state)
@@ -331,37 +321,7 @@ class CoordinateWiseDeepLSTM(StandardDeepLSTM):
         reshaped_inputs, **kwargs)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#########################################################################################################
 
 
 class KernelDeepLSTM(StandardDeepLSTM):
@@ -399,7 +359,11 @@ class KernelDeepLSTM(StandardDeepLSTM):
       `Tensor` shaped as `inputs`.
     """
     input_shape = inputs.get_shape().as_list()
+    print('Building ModuleWiseDeepLSTM:')
+    print('\t- input_shape   :', input_shape)
     reshaped_inputs = self._reshape_inputs(inputs)
+    reshaped_shape = reshaped_inputs.get_shape().as_list()
+    print('\t- reshaped_shape:', reshaped_shape)
 
     build_fn = super(KernelDeepLSTM, self)._build
     output, next_state = build_fn(reshaped_inputs, prev_state)
@@ -413,6 +377,9 @@ class KernelDeepLSTM(StandardDeepLSTM):
     reshaped_inputs = self._reshape_inputs(inputs)
     return super(KernelDeepLSTM, self).initial_state_for_inputs(
         reshaped_inputs, **kwargs)
+
+
+#########################################################################################################
 
 
 class Sgd(Network):

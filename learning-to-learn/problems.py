@@ -36,6 +36,7 @@ _nn_initializers = {
 }
 
 
+###### BASIC PROBLEMS ##########################################################
 def simple():
   """Simple problem: f(x) = x^2."""
 
@@ -99,6 +100,7 @@ def quadratic(batch_size=128, num_dims=10, stddev=0.01, dtype=tf.float32):
   return build
 
 
+###### HELPER FUNCTIONS ########################################################
 def ensemble(problems, weights=None):
   """Ensemble of problems.
 
@@ -138,87 +140,7 @@ def _xent_loss(output, labels):
   return tf.reduce_mean(loss)
 
 
-def mnist(layers,  # pylint: disable=invalid-name
-          activation="sigmoid",
-          batch_size=128,
-          mode="train"):
-  """Mnist classification with a multi-layer perceptron."""
-
-  if activation == "sigmoid":
-    activation_op = tf.sigmoid
-  elif activation == "relu":
-    activation_op = tf.nn.relu
-  else:
-    raise ValueError("{} activation not supported".format(activation))
-
-  # Data.
-  data = mnist_dataset.load_mnist()
-  data = getattr(data, mode)
-  images = tf.constant(data.images, dtype=tf.float32, name="MNIST_images")
-  images = tf.reshape(images, [-1, 28, 28, 1])
-  labels = tf.constant(data.labels, dtype=tf.int64, name="MNIST_labels")
-
-  # Network.
-  mlp = snt.nets.MLP(list(layers) + [10],
-                     activation=activation_op,
-                     initializers=_nn_initializers)
-  network = snt.Sequential([snt.BatchFlatten(), mlp])
-
-  def build():
-    indices = tf.random_uniform([batch_size], 0, data.num_examples, tf.int64)
-    batch_images = tf.gather(images, indices)
-    batch_labels = tf.gather(labels, indices)
-    output = network(batch_images)
-    return _xent_loss(output, batch_labels)
-
-  return build
-
-
-
-
-
-
-
-
-
-def gatenet(batch_size=128,
-          mode="train"):
-
-  # Data.
-  data = mnist_dataset.load_mnist()
-  data = getattr(data, mode)
-  images = tf.constant(data.images, dtype=tf.float32, name="MNIST_images")
-  images = tf.reshape(images, [-1, 28, 28, 1])
-  labels = tf.constant(data.labels, dtype=tf.int64, name="MNIST_labels")
-
-  # Network.
-  parameter_dict = Parameters().__dict__
-
-  # Build computation graph
-  graph = Graph(parameter_dict)
-
-  def build():
-    indices = tf.random_uniform([batch_size], 0, data.num_examples, tf.int64)
-    batch_images = tf.gather(images, indices)
-    batch_labels = tf.gather(labels, indices)
-    output = graph.return_logits(batch_images)
-    return _xent_loss(output, batch_labels)
-
-  return build
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+###### OTHER HELPER FUNCTIONS ##################################################
 CIFAR10_URL = "http://www.cs.toronto.edu/~kriz"
 CIFAR10_FILE = "cifar-10-binary.tar.gz"
 CIFAR10_FOLDER = "cifar-10-batches-bin"
@@ -238,6 +160,7 @@ def _maybe_download_cifar10(path):
     tarfile.open(filepath, "r:gz").extractall(path)
 
 
+###### ADVANCED PROBLEMS #######################################################
 def cifar10(path,  # pylint: disable=invalid-name
             conv_channels=None,
             linear_layers=None,
@@ -320,3 +243,68 @@ def cifar10(path,  # pylint: disable=invalid-name
     return _xent_loss(output, label_batch)
 
   return build
+
+
+def mnist(layers,  # pylint: disable=invalid-name
+          activation="sigmoid",
+          batch_size=128,
+          mode="train"):
+  """Mnist classification with a multi-layer perceptron."""
+
+  if activation == "sigmoid":
+    activation_op = tf.sigmoid
+  elif activation == "relu":
+    activation_op = tf.nn.relu
+  else:
+    raise ValueError("{} activation not supported".format(activation))
+
+  # Data.
+  data = mnist_dataset.load_mnist()
+  data = getattr(data, mode)
+  images = tf.constant(data.images, dtype=tf.float32, name="MNIST_images")
+  images = tf.reshape(images, [-1, 28, 28, 1])
+  labels = tf.constant(data.labels, dtype=tf.int64, name="MNIST_labels")
+
+  # Network.
+  mlp = snt.nets.MLP(list(layers) + [10],
+                     activation=activation_op,
+                     initializers=_nn_initializers)
+  network = snt.Sequential([snt.BatchFlatten(), mlp])
+
+  def build():
+    indices = tf.random_uniform([batch_size], 0, data.num_examples, tf.int64)
+    batch_images = tf.gather(images, indices)
+    batch_labels = tf.gather(labels, indices)
+    output = network(batch_images)
+    return _xent_loss(output, batch_labels)
+
+  return build
+
+
+###### GATENET #################################################################
+def gatenet(batch_size=128,
+          mode="train"):
+
+  # Network.
+  parameter_dict = Parameters().__dict__
+
+  # Data.
+  data = mnist_dataset.load_mnist()
+  data = getattr(data, mode)
+  images = tf.constant(data.images, dtype=tf.float32, name="MNIST_images")
+  images = tf.reshape(images, [-1, 28, 28, 1])
+  labels = tf.constant(data.labels, dtype=tf.int64, name="MNIST_labels")
+
+  # Build computation graph
+  graph = Graph(parameter_dict)
+
+  def build():
+    indices = tf.random_uniform([batch_size], 0, data.num_examples, tf.int64)
+    batch_images = tf.gather(images, indices)
+    batch_labels = tf.gather(labels, indices)
+    output = graph.return_logits(batch_images)
+    return _xent_loss(output, batch_labels)
+
+  return build
+################################################################################
+

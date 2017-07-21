@@ -86,6 +86,7 @@ def get_config(problem_name, path=None):
         "net_path": get_net_path("cw", path)
     }}
     net_assignments = None
+
   elif problem_name == "simple-multi":
     problem = problems.simple_multi_optimizer()
     net_config = {
@@ -100,6 +101,7 @@ def get_config(problem_name, path=None):
         }
     }
     net_assignments = [("cw", ["x_0"]), ("adam", ["x_1"])]
+
   elif problem_name == "quadratic":
     problem = problems.quadratic(batch_size=128, num_dims=10)
     net_config = {"cw": {
@@ -108,12 +110,12 @@ def get_config(problem_name, path=None):
         "net_path": get_net_path("cw", path)
     }}
     net_assignments = None
+
   elif problem_name == "mnist":
     mode = "train" if path is None else "test"
     problem = problems.mnist(layers=(20,), mode=mode)
     net_config = {"cw": get_default_net_config("cw", path)}
     net_assignments = None
-
 
   elif problem_name == "gatenet":
     problem = problems.gatenet()
@@ -128,6 +130,7 @@ def get_config(problem_name, path=None):
                                mode=mode)
     net_config = {"cw": get_default_net_config("cw", path)}
     net_assignments = None
+
   elif problem_name == "cifar-multi":
     mode = "train" if path is None else "test"
     problem = problems.cifar10("cifar10",
@@ -145,6 +148,7 @@ def get_config(problem_name, path=None):
     fc_vars += ["mlp/linear_{}/b".format(i) for i in xrange(2)]
     fc_vars += ["mlp/batch_norm/beta"]
     net_assignments = [("conv", conv_vars), ("fc", fc_vars)]
+
   else:
     raise ValueError("{} is not a valid problem".format(problem_name))
 
