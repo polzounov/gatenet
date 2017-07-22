@@ -59,6 +59,8 @@ class MetaDataManager(DataManager):
                                              dtype=np.uint8)
         self.dataset_train_labels = np.empty((self.num_dataset_classes, self.images_per_class - dataset_num_test),
                                              dtype=np.int32)
+        self.dataset_train_classes = np.empty((self.num_dataset_classes, self.images_per_class - dataset_num_test),
+                                             dtype=np.int32)
 
         self.dataset_test_images = np.empty((self.num_dataset_classes, dataset_num_test), dtype=np.uint8)
         self.dataset_test_labels = np.empty((self.num_dataset_classes, dataset_num_test), dtype=np.int32)
@@ -68,10 +70,11 @@ class MetaDataManager(DataManager):
             np.random.shuffle(arr)
 
             self.dataset_train_images[i] = arr[:self.images_per_class - dataset_num_test]
-            self.dataset_train_labels[i] = np.repeat(self.dataset_classes[i], self.images_per_class - dataset_num_test)
+            self.dataset_train_labels[i] = np.repeat(i, self.images_per_class - dataset_num_test)
+            self.dataset_train_classes[i] = np.repeat(self.dataset_classes[i], self.images_per_class - dataset_num_test)
 
             self.dataset_test_images[i] = arr[self.images_per_class - dataset_num_test:]
-            self.dataset_test_labels[i] = np.repeat(self.dataset_classes[i], dataset_num_test)
+            self.dataset_test_labels[i] = np.repeat(i, dataset_num_test)
 
     def get_train_batch(self):
         batch_size = self.k_shot * self.num_dataset_classes
@@ -83,55 +86,61 @@ class MetaDataManager(DataManager):
             elems = np.random.choice(len(self.dataset_train_images[i]), self.k_shot, replace=False)
             for j in range(self.k_shot):
                 batch_labels[count] = self.dataset_train_labels[i][elems[j]]
-                batch_images[count] = self.dataset.aquire_image(self.dataset_train_labels[i][elems[j]], elems[j])
+                batch_images[count] = self.dataset.aquire_image(self.dataset_train_classes[i][elems[j]], elems[j])
                 count = count + 1
 
+        batch_labels = np.reshape(batch_labels,(-1,))
         return batch_images, batch_labels
 
 
-k_fold = 5
-num_classes = 5
-
-tiny_imagenet_path = "/home/chris/tiny-imagenet-200"
-omniglot_path = "/home/chris/images_background"
 
 
 
-imagenet_metaDataManager = MetaDataManager(tiny_imagenet_path, dataset='tiny-imagenet')
-imagenet_metaDataManager.build_dataset(k_fold,num_classes,100)
-images, labels = imagenet_metaDataManager.get_train_batch()
+if __name__ == '__main__':
 
+    k_fold = 5
+    num_classes = 5
 
-plt.figure(1)
-count = 0
-for i in range(num_classes):
-    for j in range(k_fold):
-        plt.subplot(num_classes,k_fold,count+1)
-        imgplot = plt.imshow(np.reshape(images[count], (64,64,3)))
-        count = count + 1
-#plt.show()
+    tiny_imagenet_path = "/home/chris/tiny-imagenet-200"
+    omniglot_path = "/home/chris/images_background"
 
 
 
+    imagenet_metaDataManager = MetaDataManager(tiny_imagenet_path, dataset='tiny-imagenet')
+    imagenet_metaDataManager.build_dataset(k_fold,num_classes,100)
+    images, labels = imagenet_metaDataManager.get_train_batch()
+
+
+    plt.figure(1)
+    count = 0
+    for i in range(num_classes):
+        for j in range(k_fold):
+            plt.subplot(num_classes,k_fold,count+1)
+            imgplot = plt.imshow(np.reshape(images[count], (64,64,3)))
+            count = count + 1
+    #plt.show()
 
 
 
-omniglot_metaDataManager = MetaDataManager(omniglot_path,dataset='omniglot')
-omniglot_metaDataManager.build_dataset(k_fold,num_classes,5)
-images, labels = omniglot_metaDataManager.get_train_batch()
 
 
-plt.figure(2)
-count = 0
-for i in range(num_classes):
-    for j in range(k_fold):
-        plt.subplot(num_classes,k_fold,count+1)
-        imgplot = plt.imshow(np.reshape(images[count], (105,105)))
-        count = count + 1
-plt.show()
+
+    omniglot_metaDataManager = MetaDataManager(omniglot_path,dataset='omniglot')
+    omniglot_metaDataManager.build_dataset(k_fold,num_classes,5)
+    images, labels = omniglot_metaDataManager.get_train_batch()
 
 
-gg = 1
+    plt.figure(2)
+    count = 0
+    for i in range(num_classes):
+        for j in range(k_fold):
+            plt.subplot(num_classes,k_fold,count+1)
+            imgplot = plt.imshow(np.reshape(images[count], (105,105)))
+            count = count + 1
+    plt.show()
+
+
+    gg = 1
 
 
 

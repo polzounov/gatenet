@@ -14,6 +14,7 @@ class DataSet:
         self.classes = None
         self.images_per_class = None
         self.image_size = None
+        self.image_size_matrix = None
         self.images = None
         self.images_in_memory = images_in_memory
 
@@ -81,6 +82,7 @@ class TinyImagenet(DataSet):
 
         # size of image
         self.image_size = 64 * 64 * 3
+        self.image_size_matrix = (64,64,3)
 
         if self.images_in_memory == True:
             self.load_images_in_memory()
@@ -136,6 +138,7 @@ class Omniglot(DataSet):
 
         # size of image
         self.image_size = 105*105
+        self.image_size_matrix = (105,105,1)
 
         if self.images_in_memory == True:
             self.load_images_in_memory()
@@ -164,11 +167,63 @@ class Omniglot(DataSet):
 
 
 
+
+class MNIST(DataSet):
+    def __init__(self, path, images_in_memory):
+        super().__init__(path, images_in_memory)
+
+
+    def get_image_file_pointers(self):
+        # store file location to all images in image_pointers
+        self.image_pointers = []
+
+        class_folder = self.path + "/training"
+        class_contents = os.listdir(class_folder)
+
+        use_num_images = 1000
+
+        for i in range(len(class_contents)):
+            folder = self.path + "/training/" + class_contents[i].strip()
+            contents = os.listdir(folder)
+
+            contents = [folder + '/' + contents[j] for j in range(use_num_images)]
+            self.image_pointers.append(contents)
+
+        # number of classes, 200 for tiny-imagenet
+        self.classes = len(self.image_pointers)
+
+        # number of images per classes, 500 for tiny-imagenet
+        self.images_per_class = len(self.image_pointers[0])
+
+        # size of image
+        self.image_size = 28 * 28
+        self.image_size_matrix = (28,28,1)
+
+        if self.images_in_memory == True:
+            self.load_images_in_memory()
+
+    def aquire_image(self, class_num, image_num):
+        if self.images_in_memory == True:
+            return self.images[class_num][image_num]
+
+        img = Image.open(self.image_pointers[class_num][image_num])
+        img.load()
+        data = np.asarray(img, dtype="uint8")
+        data = np.reshape(data, (-1,))
+
+        return data
+
+
+
+
+
 def load_dataset(path, dataset='tiny-imagenet', load_images_into_memory=False):
     if dataset == 'tiny-imagenet':
         return TinyImagenet(path, load_images_into_memory)
     if dataset == 'omniglot':
         return Omniglot(path, load_images_into_memory)
+    if dataset == 'mnist':
+        return MNIST(path, load_images_into_memory)
 
 
 
