@@ -146,6 +146,7 @@ class MetaOptimizer():
         fx is the optimizee loss func
         x are all the variables in the network
         '''
+        x = self._optimizee_vars
         with tf.name_scope("gradients"):
             gradients = tf.gradients(fx, x)
 
@@ -165,7 +166,7 @@ class MetaOptimizer():
                     # into single tensor (k,)
                     flattened_grads = flat_helper.flatten(gradients)
                     # Run step for the RNN optimizer
-                    flattened_deltas = OptimizerType(flattened_grads)
+                    flattened_deltas, next_state = OptimizerType(flattened_grads,'1111')
                     # Get deltas back into original form
                     deltas = flat_helper.unflatten(flattened_deltas)
                     list_deltas.append(deltas)
