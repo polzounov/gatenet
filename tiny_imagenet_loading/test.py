@@ -16,6 +16,15 @@ path = "/home/chris/tiny-imagenet-200"
 #########################
 #########################
 
+#print('ss' + ' completed in: ' + str(5-2))
+'''
+from tiny_imagenet_loading.timing import *
+timer = Timer()
+
+timer.reset_time()
+timer.log_time('efefe')
+'''
+
 
 text_file = open(path + "/wnids.txt", "r")
 lines = text_file.readlines()

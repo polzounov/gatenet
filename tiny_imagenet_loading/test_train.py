@@ -13,8 +13,12 @@ from experiments import *
 
 from sklearn.neighbors import KNeighborsClassifier
 from tiny_imagenet_loading.dManager import *
+from tiny_imagenet_loading.timing import *
 
 def train(parameter_dict=None):
+    timer = Timer()
+    timer.reset_time()
+
     if parameter_dict is None:
         print('Use test params')
         parameter_dict = Parameters().__dict__
@@ -63,8 +67,15 @@ def train(parameter_dict=None):
     writer = tf.summary.FileWriter('./logs', graph=tf.get_default_graph())
     # Command to run: tensorboard --logdir=logs
 
+
+    timer.log_time('setup')
     for i in range(1000):
+
+        timer.reset_time()
         images, labels = metaDataManager.get_train_batch()
+        timer.log_time('get train batch')
+
+
         tr_data = np.reshape(images, (-1, 105,105,1))
 
         #plt.imshow(np.reshape(images[0], (28,28)))
@@ -79,9 +90,9 @@ def train(parameter_dict=None):
             acc = sess.run(accuracy, feed_dict={x: tr_data, y_: tr_label})
             print('training %d, accuracy %g' % (i, acc))
 
-        acc = sess.run(accuracy, feed_dict={x: tr_data, y_: tr_label})
+        timer.reset_time()
         sess.run(train_step, feed_dict={x: tr_data, y_: tr_label})
-
+        timer.log_time('training step')
 
 def main(_):
     train()
