@@ -29,7 +29,7 @@ class FlatteningHelper():
         '''Return the sum of all the flattened shapes of vars
         Eg. var1 is (10,5), var2 is (2,4,1), then return 50+8 = 58
         '''
-        variables=self.variables_in_scope
+        variables=self.vars_in_scope
         sum_flattened_shapes = 0
         for var in variables:
             var_shape = var.get_shape().as_list()
@@ -47,19 +47,17 @@ class FlatteningHelper():
          current_vars = set(self.vars_in_scope)
          list_of_current_grads = []
          for (grad, var) in list_of_grads:
-            if var is in current_vars:
+            if var in current_vars:
                 list_of_current_grads.append((grad, var))
 
 
     def flatten(self, input_tensors):
-        '''Flatten the list (batch) of lists (vars) of (gradient, variable) 
-        pairs into a single tensor of shape (batch_size, k) to input into the
-        meta optimizing RNN
+        '''Flatten a list of (gradient, variable) pairs into a single tensor of
+        shape (k,) to input into the meta optimizing RNN
+        eg  [(g1, v1), (g2, v2)] -> [g1_flattened, g2_flattened, ...]
         '''
-        # TODO make this work with batch sizes
         with tf.name_scope('flatten'):
-            ###tf.contrib.layers.flatten(var)
-            flattened_tensors = [tf.reshape(var, [-1, 1]) for var in input_tensors]
+            flattened_tensors = [tf.reshape(var, [-1]) for var in input_tensors]
             flattened_tensor = tf.concat(flattened_tensors)
 
             if flattened_tensor.get_shape().as_list() is not self.flattened_shape:
@@ -71,23 +69,47 @@ class FlatteningHelper():
 
     def unflatten(self, flattened_deltas):
         '''The output of each of the meta optimizer's RNNs will give out a
-        flattened output (batch_size, k), unflatten will take that tensor in and
+        flattened output (k,), unflatten will take that tensor in and
         return a list of tuples representing the deltas and their respective 
         variables
-
+        
+        eg [g1_flattened, g2_flattened, ...] -> [(g1, v1), (g2, v2)]
         Returns in the form of a list of (delta, variable) 
         '''
         if input_tensors.get_shape().as_list() is not self.flattened_shape:
-            raise ValueError('Incorrect input size to unflatten : \
-                    self.flattened shape is {}, but for this input the \
-                    flattened shape is {}'.format(self.flattened_shape,
-                    input_tensors.get_shape().as_list()))
+            raise ValueError('Incorrect input size to unflatten :',
+                    '\n\t self.flattened shape is:', 
+                    self.flattened_shape, 
+                    ', but for this input the flattened shape is:', 
+                    input_tensors.get_shape().as_list())
 
-        index = 0
-        for var in self.vars_in_scope:
-            var_shape = var.get_shape().as_list()
+        # TODO clean this up
+        with tf.name_scope('unflatten'):
+            index = 0
+            unflattened_grads = []
+            for var in self.vars_in_scope:
+                # Get the current shape delta is in, and the desired shape
+                original_var_shape = var.get_shape().as_list()
+                flattened_var_shape = self._get_flattened_shape(original_var_shape)
+                # Get the delta in its current shape
+                flattened_delta = flattened_deltas[index:flattened_var_shape]
+                index += flattened_var_shape
+                # Reshape the delta to the original shape of the grad
+                unflattened_delta = tf.reshape(flattened_delta, original_var_shape)
+                delta_var_tuple = (unflattened_delta, var)
+                unflattened_grads.append(delta_var_tuple)
 
 
-merge_var_lists(list_flattened_deltas):
-    raise NotImplementedError
+def merge_var_lists(list_flattened_deltas, grads=None):
+    list_deltas = []
+    for flattened_deltas in list_flattened_deltas:
+        for delta in list_deltas:
+            list_deltas.append(delta)
+
+    if grads is not None: # Do we need to reorder to same order as grads???
+        raise NotImplementedError
+
+    return list_deltas
+
+
 
