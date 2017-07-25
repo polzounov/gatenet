@@ -14,7 +14,7 @@ class DeepLSTM(snt.AbstractModule):
                  layers=(5, 5), # Each el is the hidden size of the respective RNN cell (for deep RNNs)
                  scale=1.0,
                  name='LSTM'):
-        super(LSTM, self).__init__(name=name)
+        super(DeepLSTM, self).__init__(name=name)
         self._batch_size = batch_size
         self._layers = layers
         self._scale = scale
@@ -23,10 +23,22 @@ class DeepLSTM(snt.AbstractModule):
         self._cores = []
         for i, size in enumerate(self._layers, start=1):
             name = "lstm_{}".format(i)
+
+            ######################
+            ## Test Code
+            init = _get_layer_initializers(None, name,
+                                           ("w_gates", "b_gates"))
+            ######################
+
             self._cores.append(snt.LSTM(size, name=name, initializers=init)) # TODO INIT
 
         # Create the Deep RNN
         self._rnn = snt.DeepRNN(self._cores, skip_connections=False, name="deep_rnn")
+
+        ######################
+        ## Test Code
+        init = _get_layer_initializers(None, "linear", ("w", "b"))
+        ######################
 
         # Linear layer to get the output
         self._linear = snt.Linear(output_size, name="linear", initializers=init) # TODO INIT
@@ -43,6 +55,31 @@ class DeepLSTM(snt.AbstractModule):
         return self._linear(output) * self._scale
 
 
+
+class CoordinateWiseDeepLSTM(DeepLSTM):
+    """docstring for LSTM"""
+
+    def __init__(self,
+                 output_size,
+                 batch_size=1,
+                 layers=(5, 5),  # Each el is the hidden size of the respective RNN cell (for deep RNNs)
+                 scale=1.0,
+                 name='LSTM'):
+        super(CoordinateWiseDeepLSTM, self).__init__(output_size,batch_size, layers, scale,name)
+
+
+    def _build(self, inputs):
+        ##inputs = self._preprocess(tf.expand_dims(inputs, -1))
+        # Incorporates preprocessing into data dimension
+
+        outputs = inputs
+        for i in range(inputs.get_shape().as_list()[0]):
+            input = inputs[inputs.get_shape().as_list()[0]][i]
+
+            output, next_state = self._rnn(inputs, self.prev_state[i])
+            self.prev_state[i] = next_state[i]
+            outputs[i] = output
+        return self._linear(outputs) * self._scale
 
 
 # The following code is taken from the learning to learn library from deepmind
@@ -271,6 +308,7 @@ class StandardDeepLSTM(Network):
 
 
 ################################################################################
+'''
 class CoordinateWiseDeepLSTM(StandardDeepLSTM):
   """Coordinate-wise `DeepLSTM`."""
 
@@ -314,7 +352,7 @@ class CoordinateWiseDeepLSTM(StandardDeepLSTM):
     return super(CoordinateWiseDeepLSTM, self).initial_state_for_inputs(
         reshaped_inputs, **kwargs)
 
-
+'''
 ################################################################################
 class KernelDeepLSTM(StandardDeepLSTM):
   """`DeepLSTM` for convolutional filters.
