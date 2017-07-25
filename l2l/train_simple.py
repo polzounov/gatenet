@@ -39,14 +39,11 @@ def train(parameter_dict):
         correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    # GradientDescent
-    shared_scopes=[ # Set defualt to sharing across layers
-                   'init_graph/gated_layer0',
-                   'init_graph/gated_layer1',
-                   'init_graph/output_layer'
-    ]
-    #optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
-    optimizer = tf.train.AdamOptimizer(parameter_dict['learning_rate'])
+    # Get layer wise variable sharing for the meta optimizer
+    shared_scopes = graph.scopes('layers')
+
+    # Meta optimization
+    optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
     train_step = optimizer.minimize(loss)
 
     # Initialize Variables
@@ -74,11 +71,6 @@ def train(parameter_dict):
 
 
 
-
-
-
-
-
 if __name__ == "__main__":
 
     parameter_dict = {
@@ -86,8 +78,8 @@ if __name__ == "__main__":
         'sublayer_type': AdditionSublayerModule,
         'hidden_size': 10,
         'gamma': 0,
-        'batch_size': 10,
-        'num_batches': 10,
+        'batch_size': 20,
+        'num_batches': 100,
         'learning_rate': 0.001,
         'print_every': 10,
         'M': 1,

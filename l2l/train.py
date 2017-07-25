@@ -4,11 +4,11 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.examples.tutorials.mnist import input_data
-from sklearn.neighbors import KNeighborsClassifier
+#from tensorflow.examples.tutorials.mnist import input_data
+#from sklearn.neighbors import KNeighborsClassifier
 
 from graph.graph import Graph
-import l2l.metaoptimizer
+from l2l.metaoptimizer import *
 from tensorflow_utils import *
 from testing import *
 
@@ -17,9 +17,9 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
     print('Use test params')
     parameter_dict = Parameters().__dict__
 
-  mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
-  test_images = mnist.test.images[:1000]
-  test_labels = mnist.test.labels[:1000]
+  #mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
+  #test_images = mnist.test.images[:1000]
+  #test_labels = mnist.test.labels[:1000]
 
   # Probably switch to Session rather than InteractiveSession later on
   # Start session
@@ -40,10 +40,9 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
     diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
     cross_entropy = tf.reduce_mean(diff)
 
-  # GradientDescent
-  train_step = metaoptimizer.optimizer(optimizer_type='Adam',
-                                       lr=parameter_dict['learning_rate'],
-                                       loss_func=cross_entropy)
+  # Meta optimization
+  shared_scopes = graph.scopes('layers')
+  optimizer = MetaOptimizer(shared_scopes)
 
   # Accuracy
   with tf.name_scope('accuracy'):
@@ -54,7 +53,7 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
   tf.global_variables_initializer().run()
 
   writer = tf.summary.FileWriter('./logs', graph=tf.get_default_graph())
-  #Command to run: tensorboard --logdir=logs
+  #Command to run: tensorboard --logdir=l2l/logs
 
   for i in range(parameter_dict['num_batches']):
     tr_data, tr_label = mnist.train.next_batch(parameter_dict['batch_size'])
