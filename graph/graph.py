@@ -104,10 +104,10 @@ class Graph():
 
   def scopes(self, scope_type='modules'):
     scope_type = scope_type.lower() # To lowercase
-    if (scope_type is 'modules') or (scope_type is 'm'):
+    if (scope_type == 'modules') or (scope_type == 'm'):
       scopes = []
-      for l in self.L:
-        for mod in self.M:
+      for l in range(self.L):
+        for mod in range(self.M):
           # Modules in gated layers
           scope = 'init_graph/graph/gated_layer'+str(layer)+'/module_'+str(mod)
           scopes.append(scope)
@@ -118,9 +118,9 @@ class Graph():
       scope = 'init_graph/output_layer/module'
       scopes.append(scope)
       return scopes
-    elif (scope_type is 'layers') or (scope_type is 'l'):
+    elif (scope_type == 'layers') or (scope_type == 'l'):
       scopes = []
-      for layer in self.L:
+      for layer in range(self.L):
         # Gated layers
         scope = 'init_graph/graph/gated_layer'+str(layer)
         scopes.append(scope)
@@ -128,7 +128,7 @@ class Graph():
       scope = 'init_graph/output_layer'
       scopes.append(scope)
       return scopes
-    elif (scope_type is 'graph') or (scope_type is 'g'):
+    elif (scope_type == 'graph') or (scope_type == 'g'):
       return ['init_graph']
     else:
       raise ValueError('The scope {} is not supported'.format(scope_type))
