@@ -17,9 +17,9 @@ def train(parameter_dict=None, skip_digits=[7,8], num_gate_vectors_output=100):
     print('Use test params')
     parameter_dict = Parameters().__dict__
 
-  #mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
-  #test_images = mnist.test.images[:1000]
-  #test_labels = mnist.test.labels[:1000]
+  mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
+  test_images = mnist.test.images[:1000]
+  test_labels = mnist.test.labels[:1000]
 
   # Probably switch to Session rather than InteractiveSession later on
   # Start session
