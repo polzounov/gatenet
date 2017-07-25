@@ -102,7 +102,7 @@ class Graph():
       gates[i] = np.array(g)
     return gates
 
-  def scopes(scope_type='modules'):
+  def scopes(self, scope_type='modules'):
     scope_type = scope_type.lower() # To lowercase
     if (scope_type is 'modules') or (scope_type is 'm'):
       scopes = []
