@@ -33,7 +33,7 @@ def train(parameter_dict=None):
     k_shot = 10
     num_classes = 10
     num_test_images = 5
-    metaDataManager = MetaDataManager(omniglot_path, dataset='omniglot', load_images_in_memory=True)
+    metaDataManager = MetaDataManager(omniglot_path, dataset='omniglot', load_images_in_memory=False)
     metaDataManager.build_dataset(num_classes, k_shot, num_test_images)
 
     # Input placeholders
@@ -45,6 +45,8 @@ def train(parameter_dict=None):
     # Build computation graph
     graph = Graph(parameter_dict)
     y = graph.return_logits(x)
+
+
 
     with tf.name_scope('softmax_predictions'):
         predictions = tf.nn.softmax(y)
@@ -61,15 +63,25 @@ def train(parameter_dict=None):
         correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
+    i = 0
+    for v in tf.trainable_variables():
+        print(i+1)
+        i = i+1
+        variable_summaries(v)
+
+    merged = tf.summary.merge_all()
+    #train_writer = tf.summary.FileWriter('./logs')
+
+    writer = tf.summary.FileWriter('./logs', graph=tf.get_default_graph())
     # Initialize Variables
     tf.global_variables_initializer().run()
 
-    writer = tf.summary.FileWriter('./logs', graph=tf.get_default_graph())
+
     # Command to run: tensorboard --logdir=logs
 
 
     timer.log_time('setup')
-    for i in range(1000):
+    for i in range(5):
 
         timer.reset_time()
         images, labels = metaDataManager.get_train_batch()
@@ -91,8 +103,10 @@ def train(parameter_dict=None):
             print('training %d, accuracy %g' % (i, acc))
 
         timer.reset_time()
-        sess.run(train_step, feed_dict={x: tr_data, y_: tr_label})
+        summary, _ = sess.run([merged, train_step], feed_dict={x: tr_data, y_: tr_label})
         timer.log_time('training step')
+
+        writer.add_summary(summary, i)
 
 def main(_):
     train()
