@@ -3,44 +3,36 @@ import numpy as np
 import time
 from PIL import Image
 import matplotlib.pyplot as plt
-from tiny_imagenet_loading.dataset_parameters import *
+from dataset_loading.datasets import *
 
 plt.interactive(False)
 
-#########################
-#########################
-#########################
 
-## Set path to tiny-imagenet folder
-path = "/home/chris/tiny-imagenet-200"
-
-#########################
-#########################
-
-
+# general class to handle dataset operations
 class DataManager:
 
     def __init__(self, path, dataset='tiny-imagenet', load_images_in_memory = False ):
 
-        # set path to tiny-imagenet folder
+        # path to dataset folder
         self.path = path
+
+        # load specific dataset class
         self.dataset = load_dataset(path, dataset, load_images_in_memory)
+
+        # get information about dataset
         self.classes = self.dataset.classes
         self.images_per_class = self.dataset.images_per_class
         self.image_size = self.dataset.image_size
 
-
-
     def build_dataset(self):
         pass
-
-
 
     def get_train_batch(self):
         pass
 
 
 
+# specific class to handle meta-dataset operations
 class MetaDataManager(DataManager):
     def __init__(self,path, dataset='tiny-imagenet', load_images_in_memory = False):
         super().__init__(path, dataset, load_images_in_memory)
@@ -94,8 +86,6 @@ class MetaDataManager(DataManager):
 
 
 
-
-
 if __name__ == '__main__':
 
     k_fold = 5
@@ -104,12 +94,9 @@ if __name__ == '__main__':
     tiny_imagenet_path = "/home/chris/tiny-imagenet-200"
     omniglot_path = "/home/chris/images_background"
 
-
-
     imagenet_metaDataManager = MetaDataManager(tiny_imagenet_path, dataset='tiny-imagenet')
     imagenet_metaDataManager.build_dataset(k_fold,num_classes,100)
     images, labels = imagenet_metaDataManager.get_train_batch()
-
 
     plt.figure(1)
     count = 0
@@ -119,11 +106,6 @@ if __name__ == '__main__':
             imgplot = plt.imshow(np.reshape(images[count], (64,64,3)))
             count = count + 1
     #plt.show()
-
-
-
-
-
 
     omniglot_metaDataManager = MetaDataManager(omniglot_path,dataset='omniglot')
     omniglot_metaDataManager.build_dataset(k_fold,num_classes,5)
@@ -138,12 +120,4 @@ if __name__ == '__main__':
             imgplot = plt.imshow(np.reshape(images[count], (105,105)))
             count = count + 1
     plt.show()
-
-
-    gg = 1
-
-
-
-
-
 

@@ -12,8 +12,8 @@ from tensorflow.examples.tutorials.mnist import input_data
 from experiments import *
 
 from sklearn.neighbors import KNeighborsClassifier
-from tiny_imagenet_loading.dManager import *
-from tiny_imagenet_loading.timing import *
+from dataset_loading.data_managers import *
+from dataset_loading.timing import *
 
 def train(parameter_dict=None):
     timer = Timer()

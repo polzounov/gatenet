@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 plt.interactive(False)
 
 
+# class to store all data and functions associated with the dataset
 class DataSet:
 
     def __init__(self, path, images_in_memory):
@@ -55,6 +56,8 @@ class DataSet:
 
 
 
+
+# specific dataset class for tiny-imagenet
 class TinyImagenet(DataSet):
     def __init__(self, path, images_in_memory):
         super().__init__(path, images_in_memory)
@@ -106,6 +109,7 @@ class TinyImagenet(DataSet):
 
 
 
+# specific dataset class for omniglot
 class Omniglot(DataSet):
     def __init__(self, path, images_in_memory):
         super().__init__(path, images_in_memory)
@@ -152,22 +156,11 @@ class Omniglot(DataSet):
         data = np.asarray(img, dtype="uint8")
         data = np.reshape(data, (-1,))
 
-        # if image is grayscale then tile image to form equivalent RGB representation
-        #if data.shape[0] == 64 * 64:
-         #   data = np.tile(data, 3)
-
         return data
 
 
 
-
-
-
-
-
-
-
-
+# specific dataset class for mnist
 class MNIST(DataSet):
     def __init__(self, path, images_in_memory):
         super().__init__(path, images_in_memory)
@@ -217,6 +210,7 @@ class MNIST(DataSet):
 
 
 
+# function to return specific dataset class
 def load_dataset(path, dataset='tiny-imagenet', load_images_into_memory=False):
     if dataset == 'tiny-imagenet':
         return TinyImagenet(path, load_images_into_memory)
@@ -225,21 +219,3 @@ def load_dataset(path, dataset='tiny-imagenet', load_images_into_memory=False):
     if dataset == 'mnist':
         return MNIST(path, load_images_into_memory)
 
-
-
-
-
-
-'''
-
-## Set path to tiny-imagenet folder
-path = "/home/chris/images_background"
-tt = Omniglot(path, False)
-
-img = tt.aquire_image(10,10)
-
-
-plt.figure(1)
-imgplot = plt.imshow(np.reshape(img, (105,105)))
-plt.show()
-'''
