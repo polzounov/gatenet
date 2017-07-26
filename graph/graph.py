@@ -109,10 +109,10 @@ class Graph():
       for l in range(self.L):
         for mod in range(self.M):
           # Modules in gated layers
-          scope = 'init_graph/graph/gated_layer'+str(layer)+'/module_'+str(mod)
+          scope = 'init_graph/gated_layer'+str(layer)+'/module_'+str(mod)
           scopes.append(scope)
         # Gates in gated layers
-        scope = 'init_graph/graph/gated_layer'+str(layer)+'/gates'
+        scope = 'init_graph/gated_layer'+str(layer)+'/gates'
         scopes.append(scope)
       # Linear module in output layer
       scope = 'init_graph/output_layer/module'
@@ -122,7 +122,7 @@ class Graph():
       scopes = []
       for layer in range(self.L):
         # Gated layers
-        scope = 'init_graph/graph/gated_layer'+str(layer)
+        scope = 'init_graph/gated_layer'+str(layer)
         scopes.append(scope)
       # Output layer
       scope = 'init_graph/output_layer'
