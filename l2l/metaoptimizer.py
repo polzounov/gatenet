@@ -10,13 +10,13 @@ from l2l.utils import *
 from l2l.networks import *
 
 
-MetaOptimizerRNN = namedtuple('MetaOptimizerRNN', 'rnn, flat_helper')
+#MetaOptimizerRNN = namedtuple('MetaOptimizerRNN', 'rnn, rnn_hidden_state, flat_helper')
 
 
 class MetaOptimizer():
     def __init__(self, 
                  shared_scopes=['init_graph'],
-                 optimizer_type=DeepLSTM,
+                 optimizer_type=StandardDeepLSTM,
                  second_derivatives=False,
                  params_as_state=False,
                  rnn_layers=(5,5),
@@ -49,8 +49,10 @@ class MetaOptimizer():
         self._tf_optim=None ###### REMOVE ######
         
         # Get all of the variables of the optimizee network ## TODO improve
-        self._optimizee_vars = merge_var_lists([self._get_vars_in_scope(scope) 
-                                                for scope in shared_scopes])
+        self._optimizee_vars = []
+        for scope in shared_scopes:
+            self._optimizee_vars += self._get_vars_in_scope(scope)
+        print('')
 
         with tf.variable_scope(self._scope):
             self._optimizers = []
@@ -105,7 +107,8 @@ class MetaOptimizer():
                                       layers=(5, 5),#layers=self.rnn_layers,
                                       scale=1.0,    #scale= ...,
                                       name='LSTM')  #name='Something else')
-        return MetaOptimizerRNN(rnn, flat_helper)
+            intitial_hidden_state = None
+        return [rnn, intitial_hidden_state, flat_helper]#MetaOptimizerRNN(rnn, intitial_hidden_state, flat_helper)
 
     def _meta_loss(self, optimizee_loss_func):
         '''Takes `optimizee_loss_func` applies a gradient step (to the optimizee
@@ -139,6 +142,11 @@ class MetaOptimizer():
 
         return meta_loss
 
+    """
+    ############################################################################
+    ####### This does only one tf.gradients call and attempts to split those 
+    ####### grads  into multiple 'pieces'
+    ############################################################################
     def _update_calc(self, fx):
         '''Single step of the meta optimizer to calculate the delta updates for
         the params of the optimizee network
@@ -147,26 +155,38 @@ class MetaOptimizer():
         x are all the variables in the network
         '''
         x = self._optimizee_vars
-        with tf.name_scope("gradients"):
-            gradients = tf.gradients(fx, x)
+        gradients = tf.gradients(fx, x)
 
-            # However it looks like things like BatchNorm, etc. don't support 
-            # second-derivatives so we still need this term.
-            if not self._second_derivatives:
-                gradients = [tf.stop_gradient(g) for g in gradients]
+        # However it looks like things like BatchNorm, etc. don't support
+        # second-derivatives so we still need this term.
+        if not self._second_derivatives:
+            gradients = [tf.stop_gradient(g) for g in gradients]
 
         with tf.name_scope('meta_optmizer_step'):
             for optimizer in self._optimizers:
                 list_deltas = []
                 with tf.name_scope('deltas'):
-                    OptimizerType = optimizer.rnn # same as optimizer[0]
-                    flat_helper = optimizer.flat_helper # same as optimizer[1]
+                    RNN = optimizer.rnn # same as optimizer[0]
+                    prev_state = optimizer.rnn_hidden_state # same as optimizer[1]
+                    flat_helper = optimizer.flat_helper # same as optimizer[2]
+
+                    # Get the gradients that match the current RNN
+                    matching_grads = flat_helper.matching_grads(gradients)
 
                     # Flatten the gradients from list of (gradient, variable) 
                     # into single tensor (k,)
-                    flattened_grads = flat_helper.flatten(gradients)
+                    flattened_grads = flat_helper.flatten(matching_grads)
+
+                    # If first run set initial intputs ########## This is hacky!!! Fix this ###############
+                    if prev_state is None:
+                        prev_state = RNN.initial_state_for_inputs(flattened_grads)
+
                     # Run step for the RNN optimizer
-                    flattened_deltas, next_state = OptimizerType(flattened_grads,'1111')
+                    flattened_deltas, next_state = RNN(flattened_grads, prev_state)
+
+                    # Set the new hidden state for the optimizer
+                    optimizer.rnn_hidden_state = next_state ############### TEST THIS !!!! ################
+
                     # Get deltas back into original form
                     deltas = flat_helper.unflatten(flattened_deltas)
                     list_deltas.append(deltas)
@@ -175,7 +195,73 @@ class MetaOptimizer():
             merged_deltas = merge_var_lists(list_deltas)
 
         return deltas
+    ############################################################################
+    """
 
+    ###### This one call tf.gradients several times (since it's a static graph 
+    # it doesn't actually recalculate grads multiple times but combines them???)
+    def _update_calc(self, fx):
+        '''Single step of the meta optimizer to calculate the delta updates for
+        the params of the optimizee network
+
+        fx is the optimizee loss func
+        x are all the variables in the network
+        '''
+
+        ############################################################
+        '''
+        x = self._optimizee_vars
+            gradients = tf.gradients(fx, x)
+
+        # However it looks like things like BatchNorm, etc. don't support
+        # second-derivatives so we still need this term.
+        if not self._second_derivatives:
+            gradients = [tf.stop_gradient(g) for g in gradients]
+        '''
+        ############################################################
+
+
+        with tf.name_scope('meta_optmizer_step'):
+            for i, optimizer in enumerate(self._optimizers):
+                list_deltas = []
+                with tf.name_scope('deltas'):
+                    RNN = optimizer[0]
+                    prev_state = optimizer[1]
+                    flat_helper = optimizer[2]
+
+                    ############################################################
+                    # Gradients for ONLY the current RNNs vars
+                    x = flat_helper.vars_in_scope
+                    gradients = tf.gradients(fx, x)
+
+                    # It looks like things like BatchNorm, etc. don't support
+                    # second-derivatives so we still need this term.
+                    if not self._second_derivatives:
+                        gradients = [tf.stop_gradient(g) for g in gradients]
+                    ############################################################
+
+                    # Flatten the gradients from list of (gradient, variable) 
+                    # into single tensor (k,)
+                    flattened_grads = flat_helper.flatten(gradients)
+
+                    # If first run set initial intputs ########## This is hacky!!! Fix this ###############
+                    if prev_state is None:
+                        prev_state = RNN.initial_state_for_inputs(flattened_grads)
+
+                    # Run step for the RNN optimizer
+                    flattened_deltas, next_state = RNN(flattened_grads, prev_state)
+
+                    # Set the new hidden state for the optimizer
+                    self._optimizers[i][1] = next_state ########## TEST THIS !!!! #############
+
+                    # Get deltas back into original form
+                    deltas = flat_helper.unflatten(flattened_deltas)
+                    list_deltas.append(deltas)
+
+            # Get `deltas` into form that `gradients` are in
+            merged_deltas = merge_var_lists(list_deltas)
+
+        return deltas
 
     def _update_step(self, deltas):
         '''Performs the actual update of the optimizee's params'''
@@ -196,8 +282,6 @@ class MetaOptimizer():
         with scope('update_optimizee_params'):
             self._tf_optim.apply_gradients(deltas)
 
-
-    ##### PUBLIC API ###########################################################
     def minimize(self, loss_func):
         '''A series of updates for the optmizee network and a single step of 
         optimization for the meta optimizer

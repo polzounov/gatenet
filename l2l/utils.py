@@ -13,9 +13,9 @@ class FlatteningHelper():
     variables in the scope, and it can take in that flattened version and output
     the original variables and shapes 
     """
-    def __init__(self, scope):
+    def __init__(self, scope): 
         self.scope = scope
-        self.vars_in_scope = tuple(self._get_vars_in_scope()) # Make immutable
+        self.vars_in_scope = self._get_vars_in_scope()
         self.flattened_shape = self._get_flattened_shape()
         self._second_derivatives = False
 
@@ -29,7 +29,7 @@ class FlatteningHelper():
         '''Return the sum of all the flattened shapes of vars
         Eg. var1 is (10,5), var2 is (2,4,1), then return 50+8 = 58
         '''
-        variables=self.vars_in_scope
+        variables = self.vars_in_scope
         sum_flattened_shapes = 0
         for var in variables:
             var_shape = var.get_shape().as_list()
@@ -38,6 +38,13 @@ class FlatteningHelper():
                flattened_shape *= el
             sum_flattened_shapes+= flattened_shape
         return sum_flattened_shapes
+
+    @staticmethod
+    def _product_of_list(l):
+        prod = 1
+        for el in l:
+            prod *= el
+        return prod
 
     def matching_grads(self, list_of_grads):
          '''Takes a list of (gradient, variable) pairs for all trainable 
@@ -57,13 +64,14 @@ class FlatteningHelper():
         eg  [(g1, v1), (g2, v2)] -> [g1_flattened, g2_flattened, ...]
         '''
         with tf.name_scope('flatten'):
-            flattened_tensors = [tf.reshape(var, [-1]) for var in input_tensors]
-            flattened_tensor = tf.concat(flattened_tensors)
+            flattened_tensors = [tf.reshape(var, [-1, 1]) for var in input_tensors]
+            flattened_tensor = tf.concat(flattened_tensors, axis=0)
 
-            if flattened_tensor.get_shape().as_list() is not self.flattened_shape:
-                raise ValueError('self.flattened shape is {}, but for these \
-                    inputs the flattened shape is {}'.format(self.flattened_shape,
-                    flattened_tensor.get_shape().as_list()))
+            if flattened_tensor.get_shape().as_list()[0] is not self.flattened_shape:
+                raise ValueError('self.flattened shape is',
+                                 self.flattened_shape,
+                                 ', but for these inputs the flattened shape is',
+                                 flattened_tensor.get_shape().as_list()[0])
             else:
                 return flattened_tensor
 
@@ -76,12 +84,12 @@ class FlatteningHelper():
         eg [g1_flattened, g2_flattened, ...] -> [(g1, v1), (g2, v2)]
         Returns in the form of a list of (delta, variable) 
         '''
-        if input_tensors.get_shape().as_list() is not self.flattened_shape:
+        if flattened_deltas.get_shape().as_list()[0] is not self.flattened_shape:
             raise ValueError('Incorrect input size to unflatten :',
                     '\n\t self.flattened shape is:', 
                     self.flattened_shape, 
-                    ', but for this input the flattened shape is:', 
-                    input_tensors.get_shape().as_list())
+                    ', but for this input the flattened shape is:',
+                    flattened_deltas.get_shape().as_list()[0])
 
         # TODO clean this up
         with tf.name_scope('unflatten'):
@@ -90,7 +98,7 @@ class FlatteningHelper():
             for var in self.vars_in_scope:
                 # Get the current shape delta is in, and the desired shape
                 original_var_shape = var.get_shape().as_list()
-                flattened_var_shape = self._get_flattened_shape(original_var_shape)
+                flattened_var_shape = self._product_of_list(original_var_shape)
                 # Get the delta in its current shape
                 flattened_delta = flattened_deltas[index:flattened_var_shape]
                 index += flattened_var_shape
@@ -103,7 +111,7 @@ class FlatteningHelper():
 def merge_var_lists(list_flattened_deltas, grads=None):
     list_deltas = []
     for flattened_deltas in list_flattened_deltas:
-        for delta in list_deltas:
+        for delta in flattened_deltas:
             list_deltas.append(delta)
 
     if grads is not None: # Do we need to reorder to same order as grads???

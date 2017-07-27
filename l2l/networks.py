@@ -33,6 +33,7 @@ import six
 import sonnet as snt
 import tensorflow as tf
 
+import preprocess
 
 
 def factory(net, net_options=(), net_path=None):
@@ -156,18 +157,7 @@ def _get_layer_initializers(initializers, layer_name, fields):
 
 
 
-
-
-
-
-
-
-
-
-
 '''
-
-
 ################################################################################
 class DeepLSTM(Network):
   """docstring for LSTM"""
@@ -212,75 +202,6 @@ class DeepLSTM(Network):
         return self._rnn.initial_state(batch_size, **kwargs)
 
 '''
-
-################################################################################
-class DeepLSTM(Network):
-  """LSTM layers with a Linear layer on top."""
-
-  def __init__(self, output_size, layers, preprocess_name="identity",
-               preprocess_options=None, scale=1.0, initializer=None,
-               name="deep_lstm"):
-    """Creates an instance of `StandardDeepLSTM`.
-
-    Args:
-      output_size: Output sizes of the final linear layer.
-      layers: Output sizes of LSTM layers.
-      preprocess_name: Gradient preprocessing class name (in `l2l.preprocess` or
-          tf modules). Default is `tf.identity`.
-      preprocess_options: Gradient preprocessing options.
-      scale: Gradient scaling (default is 1.0).
-      initializer: Variable initializer for linear layer. See `snt.Linear` and
-          `snt.LSTM` docs for more info. This parameter can be a string (e.g.
-          "zeros" will be converted to tf.zeros_initializer).
-      name: Module name.
-    """
-    super(DeepLSTM, self).__init__(name=name)
-
-    self._output_size = output_size
-    self._scale = scale
-
-    with tf.variable_scope(self._template.variable_scope):
-      self._cores = []
-      for i, size in enumerate(layers, start=1):
-        name = "lstm_{}".format(i)
-        init = _get_layer_initializers(initializer, name,
-                                       ("w_gates", "b_gates"))
-        self._cores.append(snt.LSTM(size, name=name, initializers=init))
-      self._rnn = snt.DeepRNN(self._cores, skip_connections=False,
-                              name="deep_rnn")
-
-      init = _get_layer_initializers(initializer, "linear", ("w", "b"))
-      self._linear = snt.Linear(output_size, name="linear", initializers=init)
-
-  def _build(self, inputs, prev_state):
-    """Connects the `StandardDeepLSTM` module into the graph.
-
-    Args:
-      inputs: 2D `Tensor` ([batch_size, input_size]).
-      prev_state: `DeepRNN` state.
-
-    Returns:
-      `Tensor` shaped as `inputs`.
-    """
-    # Adds preprocessing dimension and preprocess.
-    inputs = self._preprocess(tf.expand_dims(inputs, -1))
-    # Incorporates preprocessing into data dimension.
-    inputs = tf.reshape(inputs, [inputs.get_shape().as_list()[0], -1])
-    output, next_state = self._rnn(inputs, prev_state)
-    return self._linear(output) * self._scale, next_state
-
-  def initial_state_for_inputs(self, inputs, **kwargs):
-    batch_size = inputs.get_shape().as_list()[0]
-    return self._rnn.initial_state(batch_size, **kwargs)
-
-
-
-
-
-
-
-
-
 
 ################################################################################
 class StandardDeepLSTM(Network):
@@ -342,7 +263,12 @@ class StandardDeepLSTM(Network):
     # Incorporates preprocessing into data dimension.
     inputs = tf.reshape(inputs, [inputs.get_shape().as_list()[0], -1])
     output, next_state = self._rnn(inputs, prev_state)
-    return self._linear(output) * self._scale, next_state
+
+    output = tf.transpose(output)
+    output = self._linear(output)
+    output = tf.transpose(output)
+    output = tf.reduce_sum(output, axis=1)
+    return output*self._scale, next_state
 
   def initial_state_for_inputs(self, inputs, **kwargs):
     batch_size = inputs.get_shape().as_list()[0]
