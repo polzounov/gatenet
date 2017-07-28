@@ -7,7 +7,7 @@ import tensorflow as tf
 import numpy as np
 
 from l2l.utils import *
-from l2l.networks import *
+from l2l import networks
 
 
 #MetaOptimizerRNN = namedtuple('MetaOptimizerRNN', 'rnn, rnn_hidden_state, flat_helper')
@@ -16,7 +16,7 @@ from l2l.networks import *
 class MetaOptimizer():
     def __init__(self, 
                  shared_scopes=['init_graph'],
-                 optimizer_type=StandardDeepLSTM,
+                 optimizer_type=networks.StandardDeepLSTM,
                  second_derivatives=False,
                  params_as_state=False,
                  rnn_layers=(5,5),
@@ -56,21 +56,17 @@ class MetaOptimizer():
 
         with tf.variable_scope(self._scope):
             self._optimizers = []
-            for scope in shared_scopes:
+            for i, scope in enumerate(shared_scopes):
                 # Make sure scope doesn't contain vars from the meta optimizer
                 self._verify_scope(scope)
 
                 # Get all trainable variables in the given scope and create an 
                 # independent optimizer to optimize all variables in that scope
-                optimizer = self._init_optimizer({}, scope)
+                optimizer = self._init_optimizer({}, scope, name='optimizer'+str(i))
                 self._optimizers.append(optimizer)
 
                 print('\n Optimizer:')
                 print(optimizer)
-
-        # For scoping the variables to train with a step of ADAM
-        # (make sure that you only update optimizer vars and not optimizee vars)
-        self._meta_optimizer_vars = self._get_vars_in_scope(self._scope)
 
 
     ##### SIMPLE HELPER FUNCTIONS ##############################################
@@ -222,8 +218,8 @@ class MetaOptimizer():
 
 
         with tf.name_scope('meta_optmizer_step'):
+            list_deltas = []
             for i, optimizer in enumerate(self._optimizers):
-                list_deltas = []
                 with tf.name_scope('deltas'):
                     RNN = optimizer[0]
                     prev_state = optimizer[1]
@@ -256,12 +252,12 @@ class MetaOptimizer():
 
                     # Get deltas back into original form
                     deltas = flat_helper.unflatten(flattened_deltas)
-                    list_deltas.append(deltas)
+                    list_deltas += deltas
 
             # Get `deltas` into form that `gradients` are in
-            merged_deltas = merge_var_lists(list_deltas)
+            #merged_deltas = merge_var_lists(list_deltas)
 
-        return deltas
+        return list_deltas
 
     def _update_step(self, deltas):
         '''Performs the actual update of the optimizee's params'''
@@ -279,7 +275,7 @@ class MetaOptimizer():
         if self._tf_optim is None: # Init first time it's called
             self._tf_optim = tf.train.GradientDescentOptimizer(learning_rate=1.)
 
-        with scope('update_optimizee_params'):
+        with tf.name_scope('update_optimizee_params'):
             self._tf_optim.apply_gradients(deltas)
 
     def minimize(self, loss_func):
@@ -289,11 +285,14 @@ class MetaOptimizer():
         meta_loss = self._meta_loss(loss_func)
 
         # Get all trainable variables from the meta_optimizer itself
-        meta_vars = self._meta_optimizer_vars
+        #meta_vars = self._meta_optimizer_vars
+        # For scoping the variables to train with a step of ADAM
+        # (make sure that you only update optimizer vars and not optimizee vars)
+        meta_optimizer_vars = self._get_vars_in_scope(scope=self._scope)
 
         # Update step of adam to (only) the meta optimizer's variables
         optimizer = tf.train.AdamOptimizer(self._lr)
-        train_step = optimizer.minimize(meta_vars)
+        train_step = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
 
         # This is actually multiple steps of update to the optimizee and one 
         # step of optimization to the optimizer itself

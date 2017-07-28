@@ -100,19 +100,19 @@ class FlatteningHelper():
                 original_var_shape = var.get_shape().as_list()
                 flattened_var_shape = self._product_of_list(original_var_shape)
                 # Get the delta in its current shape
-                flattened_delta = flattened_deltas[index:flattened_var_shape]
+                flattened_delta = flattened_deltas[index:index+flattened_var_shape]
                 index += flattened_var_shape
                 # Reshape the delta to the original shape of the grad
                 unflattened_delta = tf.reshape(flattened_delta, original_var_shape)
                 delta_var_tuple = (unflattened_delta, var)
                 unflattened_grads.append(delta_var_tuple)
+            return unflattened_grads
 
 
 def merge_var_lists(list_flattened_deltas, grads=None):
     list_deltas = []
     for flattened_deltas in list_flattened_deltas:
-        for delta in flattened_deltas:
-            list_deltas.append(delta)
+            list_deltas += delta
 
     if grads is not None: # Do we need to reorder to same order as grads???
         raise NotImplementedError
