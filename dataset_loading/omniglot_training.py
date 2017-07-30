@@ -13,7 +13,7 @@ from experiments import *
 
 from sklearn.neighbors import KNeighborsClassifier
 from dataset_loading.data_managers import *
-from dataset_loading.timing import *
+from timing import *
 
 def train(parameter_dict=None):
     timer = Timer()
