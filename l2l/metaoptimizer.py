@@ -45,8 +45,6 @@ class MetaOptimizer():
         self._len_unroll = len_unroll
         self._w_ts = w_ts
         self._lr = lr
-
-        self._tf_optim=None ###### REMOVE ######
         
         # Get all of the variables of the optimizee network ## TODO improve
         self._optimizee_vars = []
@@ -261,22 +259,11 @@ class MetaOptimizer():
 
     def _update_step(self, deltas):
         '''Performs the actual update of the optimizee's params'''
-        # TODO: Do this properly
-        # This is the lazy version of code commented out below 
-        '''
-        with tf.name_scope("dx"):
-            for subset, key, s_i in zip(subsets, net_keys, state):
-                x_i = [x[j] for j in subset]
-                deltas, s_i_next = update(nets[key], fx, x_i, s_i)
-                for idx, j in enumerate(subset):
-                    x_next[j] += deltas[idx]
-                state_next.append(s_i_next)
-        '''
-        if self._tf_optim is None: # Init first time it's called
-            self._tf_optim = tf.train.GradientDescentOptimizer(learning_rate=1.)
-
         with tf.name_scope('update_optimizee_params'):
-            self._tf_optim.apply_gradients(deltas)
+            for grad, var in deltas:
+                print('\nvar : {}\ngrad: {}'.format(var, grad))
+                tf.assign_sub(var, grad) # Update the variable with the delta
+
 
     def minimize(self, loss_func):
         '''A series of updates for the optmizee network and a single step of 
@@ -296,5 +283,5 @@ class MetaOptimizer():
 
         # This is actually multiple steps of update to the optimizee and one 
         # step of optimization to the optimizer itself
-        return train_step 
+        return train_step
 
