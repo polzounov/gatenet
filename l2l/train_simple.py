@@ -16,7 +16,6 @@ def simple_problem(batch_size):
     y = np.sqrt(x)
     return (x, y)
 
-
 ################################################################################
 ######                        MAIN PROGRAM                                ######
 ################################################################################
@@ -31,9 +30,14 @@ def train(parameter_dict):
     graph = Graph(parameter_dict)
     y = graph.return_logits(x)
 
-    with tf.name_scope('loss'):
-        diff = tf.abs(y_ - y)
-        loss = tf.reduce_mean(diff)
+    def loss_func(x=x, y_=y_, fx=graph.return_logits):
+        def build():
+            y = graph.return_logits(x)
+            with tf.name_scope('loss'):
+                return tf.reduce_mean(tf.abs(y_ - y))
+        return build
+
+    loss = loss_func()
 
     with tf.name_scope('accuracy'):
         correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
@@ -43,8 +47,9 @@ def train(parameter_dict):
     shared_scopes = graph.scopes('layers')
 
     # Meta optimization
+    print('Actually going to be doing stuff now')
     optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
-    train_step = optimizer.minimize(loss)
+    train_step = optimizer.minimize(loss_func=loss_func)
 
     # Initialize Variables
     tf.global_variables_initializer().run()

@@ -5,6 +5,7 @@ from __future__ import print_function
 from collections import namedtuple
 import tensorflow as tf
 import numpy as np
+import mock
 
 from l2l.utils import *
 from l2l import networks
@@ -13,16 +14,63 @@ from l2l import networks
 #MetaOptimizerRNN = namedtuple('MetaOptimizerRNN', 'rnn, rnn_hidden_state, flat_helper')
 
 
+def _custom_getter(name=None,
+                   var_dict=None,
+                   shape=None,
+                   dtype=None,
+                   initializer=None,
+                   regularizer=None,
+                   reuse=None,
+                   trainable=None,
+                   collections=None,
+                   caching_device=None,
+                   partitioner=None,
+                   validate_shape=None,
+                   use_resource=None):
+    kws = [shape, dtype, initializer, regularizer, reuse, trainable, 
+           collections, caching_device, partitioner, validate_shape, 
+           use_resource]
+    kw_names = ['shape', 'dtype', 'initializer', 'regularizer', 'reuse', 
+                'trainable', 'collections', 'caching_device', 'partitioner', 
+                'validate_shape', 'use_resource']
+    for i, kw in enumerate(kws):
+        if kw is not None:
+            raise AttributeError('The meta opt\'s custom getter does not'
+                                 'support the keyword argument:', kw_names[i])
+    if (name is None) or (var_dict is None):
+        raise AttributeError('Need name and var dict for meta opt custom getter')
+    # Return the var or tensor
+    return var_dict[name]
+
+
+def _wrap_variable_creation(func, var_dict):
+    '''Provides a custom getter for all variable creations.'''
+
+    def custom_getter(*args, var_dict=var_dict, **kwargs):
+        return _custom_getter(*args, var_dict=var_dict, **kwargs)
+
+    original_get_variable = tf.get_variable
+    def custom_get_variable(*args, **kwargs):
+        if hasattr(kwargs, 'custom_getter'):
+            raise AttributeError('Custom getters are not supported for optimizee variables.')
+        return original_get_variable(*args, custom_getter=custom_getter, **kwargs)
+
+    # Mock the get_variable method.
+    with mock.patch('tensorflow.get_variable', custom_get_variable):
+        return func()
+
+
 class MetaOptimizer():
     def __init__(self, 
                  shared_scopes=['init_graph'],
                  optimizer_type=networks.StandardDeepLSTM,
-                 second_derivatives=False,
+                 second_derivatives=True,
                  params_as_state=False,
                  rnn_layers=(5,5),
                  len_unroll=3,
                  w_ts=None,
-                 lr=0.001, # The lr for the meta optimizer (not for fx)
+                 lr=1, # Scale the deltas from the optimizer
+                 meta_lr=0.001, # The lr for the meta optimizer (not for fx)
                  name='MetaOptimizer'):
         '''An optimizer that mimics the API of tf.train.Optimizer
         ARGS:
@@ -45,12 +93,30 @@ class MetaOptimizer():
         self._len_unroll = len_unroll
         self._w_ts = w_ts
         self._lr = lr
+        self._meta_lr = meta_lr
         
         # Get all of the variables of the optimizee network ## TODO improve
         self._optimizee_vars = []
         for scope in shared_scopes:
             self._optimizee_vars += self._get_vars_in_scope(scope)
-        print('')
+        self._optimizee_vars = tuple(self._optimizee_vars) # Freeze values
+
+
+        self._fake_optimizee_vars = np.zeros(len(self._optimizee_vars), dtype=object)
+        self._fake_optimizee_var_dict = {}
+        for i, var in enumerate(self._optimizee_vars):
+            print('Var :', var)
+            fake_var_tensor = tf.identity(var) # Returns a _TENSOR_ not Variable
+            fake_var = tf.Variable(fake_var_tensor)
+            self._fake_optimizee_vars[i] = fake_var
+            print('Fake:', self._fake_optimizee_vars[i])
+
+            # Dictionary for the custom getter
+            self._custom_var_dict = {}
+            self._custom_var_dict[var.name] = self._fake_optimizee_vars[i]
+        self._fake_optimizee_vars = tuple(self._fake_optimizee_vars) # Freeze values
+
+
 
         with tf.variable_scope(self._scope):
             self._optimizers = []
@@ -88,9 +154,6 @@ class MetaOptimizer():
         ##  raise ValueError('You cannot use a scope containing the meta optimizer')
         print('TODO Implement _verify_scope')
 
-    def _get_meta_optimizer_vars(self):
-        return self._get_vars_in_scope(self._scope)
-
 
     ##### OPTIMIZER FUNCTIONS ##################################################
     def _init_optimizer(self, optimizer_options, scope, name='optimizer'):
@@ -104,35 +167,33 @@ class MetaOptimizer():
             intitial_hidden_state = None
         return [rnn, intitial_hidden_state, flat_helper]#MetaOptimizerRNN(rnn, intitial_hidden_state, flat_helper)
 
-    def _meta_loss(self, optimizee_loss_func):
+    def _meta_loss(self, loss_func):
         '''Takes `optimizee_loss_func` applies a gradient step (to the optimizee
         network) for the original variables and returns the loss for the meta
         optimizer itself
 
         - optimizee_loss_func is the loss you want to minimize for the optimizee 
         function (eg. cross-entropy between predictions and labels on mnist)
-
-        https://www.tensorflow.org/api_docs/python/tf/train/GradientDescentOptimizer
-        USE tf.train.GradientDescentOptimizer (for now) to:
-            - Get the gradients for certain variables:
-                - tf.train.GradientDescentOptimizer().compute_gradients()
-            - Apply the deltas from the meta_learner:
-                - tf.train.GradientDescentOptimizer().apply_gradients()
         '''
+
         if self._w_ts is None:
             # Time step weights are all equal as in paper
             self._w_ts = [1. for _ in range(self._len_unroll)] 
 
         with tf.name_scope('meta_loss'):
             meta_loss = 0
+            prev_loss = _wrap_variable_creation(loss_func, self._fake_optimizee_var_dict)
+            prev_loss = prev_loss()
 
             for t in range(self._len_unroll):
-                deltas = self._update_calc(fx=optimizee_loss_func)
-                self._update_step(deltas)
+                x = list(self._fake_optimizee_vars)
+                deltas = self._update_calc(prev_loss, x)
+                self._fake_update_step(deltas)
 
+                prev_loss = _wrap_variable_creation(loss_func, self._fake_optimizee_var_dict)()
                 # Add the loss of the optmizee after the update step to the meta
                 # loss weighted by w_t for the current time step
-                meta_loss += tf.reduce_sum(optimizee_loss_func) * self._w_ts[t]
+                meta_loss += tf.reduce_sum(prev_loss) * self._w_ts[t]
 
         return meta_loss
 
@@ -194,27 +255,13 @@ class MetaOptimizer():
 
     ###### This one call tf.gradients several times (since it's a static graph 
     # it doesn't actually recalculate grads multiple times but combines them???)
-    def _update_calc(self, fx):
+    def _update_calc(self, fx, x):
         '''Single step of the meta optimizer to calculate the delta updates for
         the params of the optimizee network
 
         fx is the optimizee loss func
         x are all the variables in the network
         '''
-
-        ############################################################
-        '''
-        x = self._optimizee_vars
-            gradients = tf.gradients(fx, x)
-
-        # However it looks like things like BatchNorm, etc. don't support
-        # second-derivatives so we still need this term.
-        if not self._second_derivatives:
-            gradients = [tf.stop_gradient(g) for g in gradients]
-        '''
-        ############################################################
-
-
         with tf.name_scope('meta_optmizer_step'):
             list_deltas = []
             for i, optimizer in enumerate(self._optimizers):
@@ -223,16 +270,13 @@ class MetaOptimizer():
                     prev_state = optimizer[1]
                     flat_helper = optimizer[2]
 
-                    ############################################################
                     # Gradients for ONLY the current RNNs vars
-                    x = flat_helper.vars_in_scope
                     gradients = tf.gradients(fx, x)
 
                     # It looks like things like BatchNorm, etc. don't support
                     # second-derivatives so we still need this term.
                     if not self._second_derivatives:
                         gradients = [tf.stop_gradient(g) for g in gradients]
-                    ############################################################
 
                     # Flatten the gradients from list of (gradient, variable) 
                     # into single tensor (k,)
@@ -251,37 +295,42 @@ class MetaOptimizer():
                     # Get deltas back into original form
                     deltas = flat_helper.unflatten(flattened_deltas)
                     list_deltas += deltas
-
-            # Get `deltas` into form that `gradients` are in
-            #merged_deltas = merge_var_lists(list_deltas)
-
         return list_deltas
 
-    def _update_step(self, deltas):
+    def _fake_update_step(self, deltas):
         '''Performs the actual update of the optimizee's params'''
         with tf.name_scope('update_optimizee_params'):
             for grad, var in deltas:
                 print('\nvar : {}\ngrad: {}'.format(var, grad))
                 tf.assign_sub(var, grad) # Update the variable with the delta
 
+    def _real_update_step(self):
+        for var in self._optimizee_vars:
+            fake_var = self._fake_optimizee_var_dict[var.name]
+            var.assign(fake_var)
 
-    def minimize(self, loss_func):
+
+    def minimize(self, loss_func=None):
         '''A series of updates for the optmizee network and a single step of 
         optimization for the meta optimizer
         '''
+        if loss_func is None:
+            raise ValueError('loss_func must not be none')
         meta_loss = self._meta_loss(loss_func)
 
         # Get all trainable variables from the meta_optimizer itself
-        #meta_vars = self._meta_optimizer_vars
         # For scoping the variables to train with a step of ADAM
         # (make sure that you only update optimizer vars and not optimizee vars)
         meta_optimizer_vars = self._get_vars_in_scope(scope=self._scope)
 
         # Update step of adam to (only) the meta optimizer's variables
-        optimizer = tf.train.AdamOptimizer(self._lr)
-        train_step = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
+        optimizer = tf.train.AdamOptimizer(self._meta_lr)
+        #train_step = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
+
+        # Update the original variables with the updates to the fake ones
+        self._real_update_step()
 
         # This is actually multiple steps of update to the optimizee and one 
         # step of optimization to the optimizer itself
-        return train_step
+        return 0#train_step
 
