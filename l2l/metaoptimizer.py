@@ -119,12 +119,6 @@ class MetaOptimizer():
             for g, v in deltas:
                 v -= g
 
-        with tf.name_scope('update_fake_vars'):
-            # New dictionary for the custom getter
-            fake_var_dict = {}
-            fake_vars = []
-
-
         # Do a mock update step to the fake var tensors. 'Create' a new fake var
         # by passing the prev fake var through an identity (which we should make
         # into a non-differentiable edge so you won't be able to backprop
