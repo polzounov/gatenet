@@ -8,6 +8,7 @@ from graph.graph import Graph
 from graph.module import *
 from graph.sublayer import *
 from l2l.metaoptimizer import *
+import tensorflow_utils as tu
 
 
 # A simple (deterministic) 1D problem
@@ -27,7 +28,7 @@ class simple_graph():
         _, b =  x.get_shape().as_list()
         _, d = y_.get_shape().as_list()
         init_w = tf.contrib.layers.xavier_initializer(uniform=True, seed=None, dtype=tf.float32)
-        init_b = tf.constant_initializer(0.0)
+        init_b = tf.constant_initializer(0.1)
 
         self.scope = scope
         self.hidden_sizes = hidden_sizes
@@ -92,18 +93,34 @@ class simple_graph():
 ######                        MAIN PROGRAM                                ######
 ################################################################################
 def train(parameter_dict):
+    global_counter = 0
+
     with tf.Session() as sess:
 
         # Input placeholders
         x = tf.placeholder(tf.float32, [None, 1], name='x-input')
         y_ = tf.placeholder(tf.float32, [None, 1], name='y-input')
 
-        # Build computation graph
+        ########## Define simple graph #########################################
         graph = simple_graph(x, y_)
 
-        def loss_func(x=x, y_=y_, fx=graph.run, custom_getter=None):#graph.return_logits):
-            def build():
+
+        for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES):
+            with tf.name_scope('iter_'+str(global_counter)+'/'+var.name[:-2]):
+                tu.variable_summaries(var)
+        global_counter += 1
+
+
+        ########## Build the rest of the functions in the graph ################
+        def loss_func(x=x, y_=y_, fx=graph.run, custom_getter=None, gc=0):#graph.return_logits):
+            def build(gc=gc):
                 y = fx(x, custom_getter=custom_getter)
+
+                for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES):
+                    with tf.name_scope('ml_iter_'+str(global_counter)+'/'+var.name[:-2]):
+                        tu.variable_summaries(var)
+                gc += 1
+
                 with tf.name_scope('loss'):
                     return tf.reduce_mean(tf.abs(y_ - y))
             return build
@@ -117,40 +134,44 @@ def train(parameter_dict):
         ###optimizer = tf.train.AdamOptimizer(0.001)
         ###train_step = optimizer.minimize(loss)
 
-        # Initialize Variables
-        tf.global_variables_initializer().run()
-    
-
         # Get the y, loss, and accuracy to use in printing out stuff later
         y = graph.run(x)
         loss = loss_func()()
         with tf.name_scope('accuracy'):
             correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    
+            with tf.name_scope('accuracy'):
+                tf.summary.scalar('accuracy', accuracy)
 
-        writer = tf.summary.FileWriter('./logs/simple', graph=tf.get_default_graph())
+
+        merged = tf.summary.merge_all()
+        writer = tf.summary.FileWriter('./logs/simple', graph=sess.graph)
         # Command to run: tensorboard --logdir=l2l/logs/simple
 
+        # Initialize Variables
+        tf.global_variables_initializer().run()
+
+        ################ Run the graph #########################################
         # Print out some stuff
         for i in range(parameter_dict['num_batches']):
             tr_data, tr_label = simple_problem(parameter_dict['batch_size'])
 
-            if i % parameter_dict['print_every'] == 0:
-                acc = sess.run(accuracy, feed_dict={x: tr_data, y_: tr_label})
-                print('\nIteration: {}, accuracy: {}'.format(i, acc))
-                
-                predicted, loss_ = sess.run([y, loss], feed_dict={x: tr_data, y_: tr_label})
-                actual = tr_label
-                print('Predictions & Answers')
-                for i in range(min(len(actual), 10)):
-                    print('Pred: {}, Actual: {}'.format(predicted[i], actual[i]))
-                print('Loss: {}'.format(loss_))
+            summary, acc, _, predicted, loss_= sess.run(
+                                    [merged, accuracy, train_step, y, loss], 
+                                    feed_dict={x: tr_data, y_: tr_label})
 
-            acc = sess.run(accuracy, feed_dict={x: tr_data, y_: tr_label})
-            sess.run(train_step, feed_dict={x: tr_data, y_: tr_label})
+            writer.add_summary(summary, i)
 
+            print('\nIteration: {}, accuracy: {}'.format(i, acc))
 
+            #predicted, loss_ = sess.run([y, loss], feed_dict={x: tr_data, y_: tr_label})
+            actual = tr_label
+            print('Predictions & Answers')
+            for i in range(min(len(actual), 10)):
+                print('Pred: {}, Actual: {}'.format(predicted[i], actual[i]))
+            print('Loss: {}'.format(loss_))
+
+            #sess.run(train_step, feed_dict={x: tr_data, y_: tr_label})
 
 if __name__ == "__main__":
 
@@ -160,7 +181,7 @@ if __name__ == "__main__":
         'hidden_size': 10,
         'gamma': 0,
         'batch_size': 20,
-        'num_batches': 1001,
+        'num_batches': 11,
         'learning_rate': 0.001,
         'print_every': 10,
         'M': 1,
