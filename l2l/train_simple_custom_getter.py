@@ -13,6 +13,7 @@ import tensorflow_utils as tu
 
 # A simple (deterministic) 1D problem
 def simple_problem(batch_size):
+    np.random.seed(seed=0)
     x = np.random.rand(batch_size, 1) * 5
     y = np.sqrt(x)
     return (x, y)
@@ -27,8 +28,8 @@ class simple_graph():
 
         _, b =  x.get_shape().as_list()
         _, d = y_.get_shape().as_list()
-        init_w = tf.contrib.layers.xavier_initializer(uniform=True, seed=None, dtype=tf.float32)
-        init_b = tf.constant_initializer(0.1)
+        init_w = tf.contrib.layers.xavier_initializer(uniform=True, seed=2, dtype=tf.float32)
+        init_b = init_w#tf.constant_initializer(0.0)
 
         self.scope = scope
         self.hidden_sizes = hidden_sizes
@@ -131,8 +132,6 @@ def train(parameter_dict):
         # Meta optimization
         optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
         train_step = optimizer.minimize(loss_func=loss_func)
-        ###optimizer = tf.train.AdamOptimizer(0.001)
-        ###train_step = optimizer.minimize(loss)
 
         # Get the y, loss, and accuracy to use in printing out stuff later
         y = graph.run(x)
@@ -148,8 +147,22 @@ def train(parameter_dict):
         writer = tf.summary.FileWriter('./logs/simple', graph=sess.graph)
         # Command to run: tensorboard --logdir=l2l/logs/simple
 
+
+        #optimizer = tf.train.AdamOptimizer(0.001)
+        #train_step = optimizer.minimize(loss)
+
         # Initialize Variables
         tf.global_variables_initializer().run()
+
+
+        for v in tf.trainable_variables():
+            #if v.name == 'init_graph/layer0/w0:0':
+            #  print(v.eval())
+            print(v.name)
+            print(v.eval())
+
+
+        print(tf.trainable_variables())
 
         ################ Run the graph #########################################
         # Print out some stuff
@@ -171,6 +184,8 @@ def train(parameter_dict):
                 print('Pred: {}, Actual: {}'.format(predicted[i], actual[i]))
             print('Loss: {}'.format(loss_))
 
+            print(tf.trainable_variables())
+
             #sess.run(train_step, feed_dict={x: tr_data, y_: tr_label})
 
 if __name__ == "__main__":
@@ -181,7 +196,7 @@ if __name__ == "__main__":
         'hidden_size': 10,
         'gamma': 0,
         'batch_size': 20,
-        'num_batches': 11,
+        'num_batches': 1001,
         'learning_rate': 0.001,
         'print_every': 10,
         'M': 1,
@@ -189,4 +204,5 @@ if __name__ == "__main__":
         'module_type': PerceptronModule,
     }
 
+    #for i in range(100):
     train(parameter_dict)
