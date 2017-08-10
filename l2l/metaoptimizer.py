@@ -9,6 +9,7 @@ import mock
 
 from l2l.utils import *
 from l2l import networks
+from tensorflow_utils import variable_summaries
 
 
 #MetaOptimizerRNN = namedtuple('MetaOptimizerRNN', 'rnn, rnn_hidden_state, flat_helper')
@@ -58,6 +59,7 @@ class MetaOptimizer():
             - name: The name of the MetaOptimizer
                 - # TODO: Scope the entire MetaOptimizer under name
         '''
+
         self._OptimizerType = self._get_optimizer(optimizer_type)
         self._scope = name # The meta optimizer's scope
         self._second_derivatives = second_derivatives
@@ -74,7 +76,6 @@ class MetaOptimizer():
             self._optimizee_vars += self._get_vars_in_scope(scope)
 
         with tf.variable_scope(self._scope+'/init'):
-
             # Create fake variables that will be called with a custom getter for
             # the network instead of the real variables
             self._fake_optimizee_var_dict, self._fake_optimizee_vars = self._create_fakes(self._optimizee_vars)
@@ -118,6 +119,16 @@ class MetaOptimizer():
         with tf.name_scope('update_real_vars'):
             for g, v in deltas:
                 v -= g
+                n = lambda x: x.split(':')[0]
+                print(n(v.name))
+                variable_summaries(g, name='gradient'+str(n(v.name)))
+
+
+        '''with tf.name_scope('update_fake_vars'):
+            # New dictionary for the custom getter
+            fake_var_dict = {}
+            fake_vars = []'''
+
 
         # Do a mock update step to the fake var tensors. 'Create' a new fake var
         # by passing the prev fake var through an identity (which we should make
