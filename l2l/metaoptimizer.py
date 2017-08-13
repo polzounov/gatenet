@@ -41,7 +41,7 @@ class MetaOptimizer():
                  second_derivatives=True,
                  params_as_state=False,
                  rnn_layers=(5,5),
-                 len_unroll=3,
+                 len_unroll=1,
                  w_ts=None,
                  lr=1, # Scale the deltas from the optimizer
                  meta_lr=0.001, # The lr for the meta optimizer (not for fx)
@@ -113,22 +113,6 @@ class MetaOptimizer():
 
     def _update_step(self, deltas, prev_dict):
         ###### This code is dirty and unclear, TODO clean this section up ######
-
-        # Do an update step of the real variables
-        
-        with tf.name_scope('update_real_vars'):
-            for g, v in deltas:
-                v -= g
-                n = lambda x: x.split(':')[0]
-                print(n(v.name))
-                variable_summaries(g, name='gradient'+str(n(v.name)))
-
-
-        '''with tf.name_scope('update_fake_vars'):
-            # New dictionary for the custom getter
-            fake_var_dict = {}
-            fake_vars = []'''
-
 
         # Do a mock update step to the fake var tensors. 'Create' a new fake var
         # by passing the prev fake var through an identity (which we should make
@@ -343,9 +327,12 @@ class MetaOptimizer():
                 var =- grad # Update the variable with the delta
 
     def _real_update_step(self):
+        train_steps = []
         for var in self._optimizee_vars:
             fake_var = self._fake_optimizee_var_dict[var.name]
-            var.assign(fake_var)
+            assign_step = var.assign(fake_var)
+            train_steps.append(assign_step)
+        return train_steps
 
 
     def minimize(self, loss_func=None):
@@ -364,13 +351,13 @@ class MetaOptimizer():
 
         # Update step of adam to (only) the meta optimizer's variables
         optimizer = tf.train.AdamOptimizer(self._meta_lr)
-        train_step = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
+        train_step_meta = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
 
         # Update the original variables with the updates to the fake ones
         with tf.name_scope(self._scope+'/update_real_vars'):
-            pass#self._real_update_step()
+            train_step = self._real_update_step()
 
         # This is actually multiple steps of update to the optimizee and one 
         # step of optimization to the optimizer itself
-        return train_step
+        return (train_step, train_step_meta)
 

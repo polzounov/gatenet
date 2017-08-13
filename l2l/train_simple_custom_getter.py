@@ -114,15 +114,6 @@ def train(parameter_dict):
                     return tf.reduce_mean(tf.abs(y_ - y))
             return build
 
-        # Get layer wise variable sharing for the meta optimizer
-        shared_scopes = ['']
-
-        # Meta optimization
-        optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
-        train_step = optimizer.minimize(loss_func=loss_func)
-        ###optimizer = tf.train.AdamOptimizer(0.001)
-        ###train_step = optimizer.minimize(loss)
-
         # Get the y, loss, and accuracy to use in printing out stuff later
         y = graph.run(x)
 
@@ -130,8 +121,21 @@ def train(parameter_dict):
             loss = loss_func()()
             tf.summary.scalar('loss', loss)
         with tf.name_scope('accuracy'):
-            accuracy = tf.reduce_mean((y_ - y) / y_)
+            # Using cosine similarity for the sqaure root estimator
+            norm_y_ = tf.sqrt(tf.reduce_sum(tf.multiply(y_,y_)))
+            norm_y = tf.sqrt(tf.reduce_sum(tf.multiply(y,y)))
+            accuracy = tf.reduce_sum(tf.multiply(y_, y)) / (norm_y_ * norm_y)
             tf.summary.scalar('accuracy', accuracy)
+
+
+        # Get layer wise variable sharing for the meta optimizer
+        shared_scopes = ['']
+
+        # Meta optimization
+        optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
+        train_step, train_step_meta = optimizer.minimize(loss_func=loss_func)
+        ###optimizer = tf.train.AdamOptimizer(0.001)
+        ###train_step = optimizer.minimize(loss)
 
         merged = tf.summary.merge_all()
         writer = tf.summary.FileWriter('./logs/simple', graph=sess.graph)
@@ -146,23 +150,24 @@ def train(parameter_dict):
 
             # Save summaries and print
             if i % parameter_dict['print_every'] == 0:
-                summary, acc, _, predicted, loss_ = sess.run(
-                                        [merged, accuracy, train_step, y, loss], 
-                                        feed_dict={x: tr_data, y_: tr_label})
+                # Run all the stuff
+                summary, acc, _, _, predicted, loss_ = sess.run(
+                    [merged, accuracy, train_step, train_step_meta, y, loss],
+                    feed_dict={x: tr_data, y_: tr_label})
 
                 # Write out summary at current time_step
                 writer.add_summary(summary, i)
 
                 # Print stuff out
-                print('\nIteration: {}, accuracy: {}, loss: {}'.format(i, acc, loss))
+                print('\nIteration: {}, accuracy: {}, loss: {}'.format(i, acc, loss_))
                 print('Predictions & Answers')
                 for i in range(min(len(tr_label), 10)):
                     print('Pred: {}, Actual: {} -- Input: {}'.format(predicted[i], tr_label[i], tr_data[i]))
 
             else:
-                acc, _, predicted, loss_ = sess.run(
-                                        [accuracy, train_step, y, loss], 
-                                        feed_dict={x: tr_data, y_: tr_label})
+                acc, _, _, predicted, loss_ = sess.run(
+                            [accuracy, train_step, train_step_meta, y, loss], 
+                            feed_dict={x: tr_data, y_: tr_label})
 
 
 
