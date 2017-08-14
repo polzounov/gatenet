@@ -62,7 +62,7 @@ class MLP():
                 b = tf.get_variable('b_out', [self.output_size], initializer=init_b)
                 ws.append(w)
                 bs.append(b)
-    def run(self, x)#, custom_getter=None):
+    def run(self, x):#, custom_getter=None):
         # Get the variables
         with tf.variable_scope(self.scope, reuse=True):
             ws = []
@@ -277,17 +277,10 @@ def train(parameter_dict):
 if __name__ == "__main__":
 
     parameter_dict = {
-        'C': 1,
-        'sublayer_type': AdditionSublayerModule,
-        'hidden_size': 10,
-        'gamma': 0,
         'batch_size': 20,
         'num_batches': 101,
         'learning_rate': 0.001,
         'print_every': 1,
-        'M': 1,
-        'L': 2,
-        'module_type': PerceptronModule,
     }
 
     train(parameter_dict)
