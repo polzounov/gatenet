@@ -40,11 +40,11 @@ class MetaOptimizer():
                  optimizer_type=networks.StandardDeepLSTM,
                  second_derivatives=True,
                  params_as_state=False,
-                 rnn_layers=(5,5),
-                 len_unroll=1,
+                 rnn_layers=(20,20),
+                 len_unroll=3,
                  w_ts=None,
-                 lr=1, # Scale the deltas from the optimizer
-                 meta_lr=0.001, # The lr for the meta optimizer (not for fx)
+                 lr=0.001, # Scale the deltas from the optimizer
+                 meta_lr=0.01, # The lr for the meta optimizer (not for fx)
                  name='MetaOptimizer'):
         '''An optimizer that mimics the API of tf.train.Optimizer
         ARGS:
@@ -170,9 +170,9 @@ class MetaOptimizer():
         flat_helper = FlatteningHelper(scope)
         with tf.variable_scope(name):
             rnn = self._OptimizerType(output_size=flat_helper.flattened_shape,
-                                      layers=(5, 5),#layers=self.rnn_layers,
-                                      scale=1.0,    #scale= ...,
-                                      name='LSTM')  #name='Something else')
+                                      layers=self._rnn_layers,
+                                      scale=self._lr,
+                                      name='LSTM') #name='Something else')
             intitial_hidden_state = None
         return [rnn, intitial_hidden_state, flat_helper]#MetaOptimizerRNN(rnn, intitial_hidden_state, flat_helper)
 

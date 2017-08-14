@@ -14,21 +14,31 @@ from tensorflow_utils import variable_summaries
 # A simple (deterministic) 1D problem
 def simple_problem(batch_size):
     x = np.random.rand(batch_size, 1) * 5
-    y = np.sqrt(x)
+    #y = np.multiply(x, x)
+    #y = np.sqrt(x)
+    y = 10 * (x)
     return (x, y)
+
+
+def selu(x):
+    alpha = 1.6732632423543772848170429916717
+    scale = 1.0507009873554804934193349852946
+    #return scale * tf.where(x >= 0.0, x, alpha * tf.exp(x) - alpha)
+    return scale * tf.contrib.keras.activations.elu(x, alpha)
+
 
 class MLP():
     def __init__(self,
                  x,
                  y_,
-                 hidden_sizes=[2,2], 
+                 hidden_sizes=[2,2],
                  scope = 'init_graph',
-                 activation=tf.nn.relu):
+                 activation=selu):
 
         _, b = x.get_shape().as_list()
         _, d = y_.get_shape().as_list()
-        init_w = tf.contrib.layers.xavier_initializer(uniform=True, seed=1, dtype=tf.float32)
-        init_b = tf.constant_initializer(0.1)
+        init_w = tf.contrib.keras.initializers.he_uniform(seed=1)#tf.contrib.layers.xavier_initializer(uniform=True, seed=1, dtype=tf.float32)
+        init_b = tf.constant_initializer(0.01)
 
         self.scope = scope
         self.hidden_sizes = hidden_sizes
@@ -122,9 +132,13 @@ def train(parameter_dict):
             tf.summary.scalar('loss', loss)
         with tf.name_scope('accuracy'):
             # Using cosine similarity for the sqaure root estimator
+            
+            # Both need to be normalized (use label norms for both preds & labels)
             norm_y_ = tf.sqrt(tf.reduce_sum(tf.multiply(y_,y_)))
-            norm_y = tf.sqrt(tf.reduce_sum(tf.multiply(y,y)))
-            accuracy = tf.reduce_sum(tf.multiply(y_, y)) / (norm_y_ * norm_y)
+            normalized_y_ = y_ / norm_y_
+            normalized_y = y / norm_y_
+
+            accuracy = tf.losses.cosine_distance(normalized_y_, normalized_y, 0)
             tf.summary.scalar('accuracy', accuracy)
 
 
@@ -150,6 +164,13 @@ def train(parameter_dict):
 
             # Save summaries and print
             if i % parameter_dict['print_every'] == 0:
+                # Print out variables to paste into script to test easily
+                print('\nvariables = {')
+                for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='init_graph'):
+                    print("\t'{}': {},".format(
+                        var.name.split(':')[0].split('/')[-1], var.eval().tolist()))
+                print('}')
+
                 # Run all the stuff
                 summary, acc, _, _, predicted, loss_ = sess.run(
                     [merged, accuracy, train_step, train_step_meta, y, loss],
@@ -179,9 +200,9 @@ if __name__ == "__main__":
         'hidden_size': 10,
         'gamma': 0,
         'batch_size': 20,
-        'num_batches': 11,
+        'num_batches': 1001,
         'learning_rate': 0.001,
-        'print_every': 10,
+        'print_every': 5,
         'M': 1,
         'L': 2,
         'module_type': PerceptronModule,
