@@ -13,10 +13,10 @@ from tensorflow_utils import variable_summaries
 
 # A simple (deterministic) 1D problem
 def simple_problem(batch_size):
-    x = np.random.rand(batch_size, 1) * 5
+    x = np.random.rand(batch_size, 1) * 10
     #y = np.multiply(x, x)
     #y = np.sqrt(x)
-    y = 10 * (x)
+    y = x * 10
     return (x, y)
 
 
@@ -31,13 +31,13 @@ class MLP():
     def __init__(self,
                  x,
                  y_,
-                 hidden_sizes=[1],
+                 hidden_sizes=[2,2,2],
                  scope = 'init_graph',
                  activation=selu):
 
         _, b = x.get_shape().as_list()
         _, d = y_.get_shape().as_list()
-        init_w = tf.contrib.keras.initializers.he_uniform(seed=1)#tf.contrib.layers.xavier_initializer(uniform=True, seed=1, dtype=tf.float32)
+        init_w = tf.contrib.keras.initializers.he_uniform()#tf.contrib.layers.xavier_initializer(uniform=True, dtype=tf.float32)#
         init_b = tf.constant_initializer(0.01)
 
         self.scope = scope
@@ -177,7 +177,7 @@ def train(parameter_dict):
                     feed_dict={x: tr_data, y_: tr_label})
 
                 # Write out summary at current time_step
-                writer.add_summary(summary, i)
+                #writer.add_summary(summary, i)
 
                 # Print stuff out
                 print('\nIteration: {}, accuracy: {}, loss: {}'.format(i, acc, loss_))
@@ -202,7 +202,7 @@ if __name__ == "__main__":
         'batch_size': 20,
         'num_batches': 1001,
         'learning_rate': 0.001,
-        'print_every': 5,
+        'print_every': 1,
         'M': 1,
         'L': 2,
         'module_type': PerceptronModule,

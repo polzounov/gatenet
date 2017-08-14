@@ -41,7 +41,7 @@ class MetaOptimizer():
                  second_derivatives=False,
                  params_as_state=False,
                  rnn_layers=(20,20),
-                 len_unroll=1,
+                 len_unroll=3,
                  w_ts=None,
                  lr=0.001, # Scale the deltas from the optimizer
                  meta_lr=0.01, # The lr for the meta optimizer (not for fx)
@@ -150,12 +150,17 @@ class MetaOptimizer():
     def _get_optimizer(self, optimizer_name):
         '''Returns the optimizer class, works for strings too'''
         if isinstance(optimizer_name, str): # PYTHON 3 ONLY, TODO FIX FOR PY2
+            optimizer_name = optimizer_name.lower()
             optimizer_mapping = {
-                'CoordinateWiseLSTM': networks.CoordinateWiseDeepLSTM,
-                'StandardLSTM': networks.StandardDeepLSTM,
-                'KernelLSTM': networks.KernelDeepLSTM,
-                'SGD': networks.Sgd,
-                'ADAM': networks.Adam,
+                'cw': networks.CoordinateWiseDeepLSTM,
+                'cwlstm': networks.CoordinateWiseDeepLSTM,
+                'coordinatewiselstm': networks.CoordinateWiseDeepLSTM,
+                'lstm': networks.StandardDeepLSTM,
+                'standardlstm': networks.StandardDeepLSTM,
+                'kernel': networks.KernelDeepLSTM,
+                'kernellstm': networks.KernelDeepLSTM,
+                'sgd': networks.Sgd,
+                'adam': networks.Adam,
             }
             return optimizer_mapping[optimizer_name]
         else:
@@ -174,6 +179,8 @@ class MetaOptimizer():
         flat_helper = FlatteningHelper(scope)
         with tf.variable_scope(name):
             rnn = self._OptimizerType(output_size=flat_helper.flattened_shape,
+                                      preprocess_name='LogAndSign',
+                                      preprocess_options={'k': 5},
                                       layers=self._rnn_layers,
                                       scale=self._lr,
                                       name='LSTM') #name='Something else')
@@ -354,8 +361,8 @@ class MetaOptimizer():
         meta_optimizer_vars = self._get_vars_in_scope(scope=self._scope)
 
         # Update step of adam to (only) the meta optimizer's variables
-        #optimizer = tf.train.AdamOptimizer(self._meta_lr)
-        #train_step_meta = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
+        optimizer = tf.train.AdamOptimizer(self._meta_lr)
+        train_step_meta = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
 
         # Update the original variables with the updates to the fake ones
         with tf.name_scope(self._scope+'/update_real_vars'):
@@ -363,5 +370,5 @@ class MetaOptimizer():
 
         # This is actually multiple steps of update to the optimizee and one 
         # step of optimization to the optimizer itself
-        return (train_step, train_step)
+        return (train_step, train_step_meta)
 
