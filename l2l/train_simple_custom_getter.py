@@ -142,7 +142,7 @@ def train(parameter_dict):
 
 
         # Get layer wise variable sharing for the meta optimizer
-        shared_scopes = ['']
+        shared_scopes = ['init_graph']
 
         # Meta optimization
         optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
