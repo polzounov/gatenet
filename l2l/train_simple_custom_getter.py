@@ -31,7 +31,7 @@ class MLP():
     def __init__(self,
                  x,
                  y_,
-                 hidden_sizes=[2,2],
+                 hidden_sizes=[1],
                  scope = 'init_graph',
                  activation=selu):
 
@@ -97,10 +97,10 @@ class MLP():
             # Process hidden layers
             for i, (w, b) in enumerate(zip(ws[:-1], bs[:-1])):
                 with tf.variable_scope('layer'+str(i)):
-                    prev_out = self.act(tf.matmul(prev_out, w)) + b
+                    prev_out = self.act(tf.matmul(prev_out, w) + b)
             # Process output layer
             with tf.variable_scope('layer_out'):
-                return self.act(tf.matmul(prev_out, ws[-1])) + bs[-1]
+                return self.act(tf.matmul(prev_out, ws[-1]) + bs[-1])
 
 
 ################################################################################
@@ -149,7 +149,7 @@ def train(parameter_dict):
         optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
         train_step, train_step_meta = optimizer.minimize(loss_func=loss_func)
         ###optimizer = tf.train.AdamOptimizer(0.001)
-        ###train_step = optimizer.minimize(loss)
+        ###train_step = optimizer.minimize(loss); train_step_meta = loss
 
         merged = tf.summary.merge_all()
         writer = tf.summary.FileWriter('./logs/simple', graph=sess.graph)
