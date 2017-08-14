@@ -25,7 +25,7 @@ class MLP():
     def __init__(self,
                  x,
                  y_,
-                 hidden_sizes=[2,2,2],
+                 hidden_sizes=[20,20,20],
                  scope = 'init_graph',
                  activation=selu):
 
@@ -103,12 +103,10 @@ class MLP():
 def train(parameter_dict):
     with tf.Session() as sess:
 
-        omniglot_path = "/home/chris/images_background"
-        mnist_path = "/home/chris/mnist_png"
-
         k_shot = 10
         num_classes = 10
         num_test_images = 5
+        omniglot_path = '../datasets/omniglot'
         metaDataManager = MetaDataManager(omniglot_path, dataset='omniglot', load_images_in_memory=False)
         metaDataManager.build_dataset(num_classes, k_shot, num_test_images)
 
