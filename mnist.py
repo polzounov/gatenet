@@ -205,5 +205,3 @@ def main(_):
   train(skip_digits=[0,1,2], num_gate_vectors_output=1000)
 
 
-if __name__ == '__main__':
-  tf.app.run(main=main)
