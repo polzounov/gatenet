@@ -286,7 +286,7 @@ class CoordinateWiseDeepLSTM(StandardDeepLSTM):
       name: Module name.
       **kwargs: Additional `DeepLSTM` args.
     """
-    super(CoordinateWiseDeepLSTM, self).__init__(1, name=name, **kwargs)
+    super(CoordinateWiseDeepLSTM, self).__init__(name=name, **kwargs)
 
   def _reshape_inputs(self, inputs):
     return tf.reshape(inputs, [-1, 1])
@@ -302,11 +302,7 @@ class CoordinateWiseDeepLSTM(StandardDeepLSTM):
       `Tensor` shaped as `inputs`.
     """
     input_shape = inputs.get_shape().as_list()
-    print('Building CoordinateWiseDeepLSTM:')
-    print('\t- input_shape   :', input_shape)
     reshaped_inputs = self._reshape_inputs(inputs)
-    reshaped_shape = reshaped_inputs.get_shape().as_list()
-    print('\t- reshaped_shape:', reshaped_shape)
 
     build_fn = super(CoordinateWiseDeepLSTM, self)._build
     output, next_state = build_fn(reshaped_inputs, prev_state)
@@ -380,15 +376,17 @@ class KernelDeepLSTM(StandardDeepLSTM):
 class Sgd(Network):
   """Identity network which acts like SGD."""
 
-  def __init__(self, learning_rate=0.001, name="sgd"):
+  def __init__(self, scale=0.001,
+               layers=None, output_size=None, # Ignore these
+               name="sgd"):
     """Creates an instance of the Identity optimizer network.
 
     Args:
       learning_rate: constant learning rate to use.
       name: Module name.
     """
-    super(Sgd, self).__init__(name)
-    self._learning_rate = learning_rate
+    super(Sgd, self).__init__(name=name)
+    self._learning_rate = scale
 
   def _build(self, inputs, state):
     new_state = state
@@ -409,11 +407,12 @@ def _debias_adam_estimate(estimate, b, t):
 class Adam(Network):
   """Adam algorithm (https://arxiv.org/pdf/1412.6980v8.pdf)."""
 
-  def __init__(self, learning_rate=1e-3, beta1=0.9, beta2=0.999, epsilon=1e-8,
+  def __init__(self, scale=1e-3, beta1=0.9, beta2=0.999, epsilon=1e-8,
+               layers=None, output_size=None, # Ignore these
                name="adam"):
     """Creates an instance of Adam."""
     super(Adam, self).__init__(name=name)
-    self._learning_rate = learning_rate
+    self._learning_rate = scale
     self._beta1 = beta1
     self._beta2 = beta2
     self._epsilon = epsilon

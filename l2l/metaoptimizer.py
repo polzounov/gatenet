@@ -37,11 +37,11 @@ def _wrap_variable_creation(func, var_dict):
 class MetaOptimizer():
     def __init__(self, 
                  shared_scopes=['init_graph'],
-                 optimizer_type=networks.StandardDeepLSTM,
-                 second_derivatives=True,
+                 optimizer_type='CoordinateWiseLSTM',
+                 second_derivatives=False,
                  params_as_state=False,
                  rnn_layers=(20,20),
-                 len_unroll=3,
+                 len_unroll=1,
                  w_ts=None,
                  lr=0.001, # Scale the deltas from the optimizer
                  meta_lr=0.01, # The lr for the meta optimizer (not for fx)
@@ -153,10 +153,14 @@ class MetaOptimizer():
             optimizer_mapping = {
                 'CoordinateWiseLSTM': networks.CoordinateWiseDeepLSTM,
                 'StandardLSTM': networks.StandardDeepLSTM,
-                'KernelLSTM': networks.KernelDeepLSTM
+                'KernelLSTM': networks.KernelDeepLSTM,
+                'SGD': networks.Sgd,
+                'ADAM': networks.Adam,
             }
             return optimizer_mapping[optimizer_name]
-        return optimizer_name # If not string assume it's the class itself
+        else:
+            # If not string assume optimizer_name is a class
+            return optimizer_name
 
     def _verify_scope(self, scope):
         ##if scope contain meta_optimizer vars:
@@ -350,8 +354,8 @@ class MetaOptimizer():
         meta_optimizer_vars = self._get_vars_in_scope(scope=self._scope)
 
         # Update step of adam to (only) the meta optimizer's variables
-        optimizer = tf.train.AdamOptimizer(self._meta_lr)
-        train_step_meta = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
+        #optimizer = tf.train.AdamOptimizer(self._meta_lr)
+        #train_step_meta = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
 
         # Update the original variables with the updates to the fake ones
         with tf.name_scope(self._scope+'/update_real_vars'):
@@ -359,5 +363,5 @@ class MetaOptimizer():
 
         # This is actually multiple steps of update to the optimizee and one 
         # step of optimization to the optimizer itself
-        return (train_step, train_step_meta)
+        return (train_step, train_step)
 
