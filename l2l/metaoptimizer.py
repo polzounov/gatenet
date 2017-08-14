@@ -17,7 +17,7 @@ import pickle
 #MetaOptimizerRNN = namedtuple('MetaOptimizerRNN', 'rnn, rnn_hidden_state, flat_helper')
 
 
-def _custom_getter(name, *args, var_dict=None, **kwargs):
+def _custom_getter(name, *args, var_dict=None, use_real_getter=False, **kwargs):
     if var_dict is None:
         raise AttributeError('No var dictionary is given')
     # Return the var or tensor
@@ -229,9 +229,9 @@ class MetaOptimizer():
             self._w_ts = [1. for _ in range(self._len_unroll)] 
 
         meta_loss = 0
-        prev_loss = loss_func(custom_getter=callable_custom_getter)()
-        ###prev_loss = _wrap_variable_creation(
-        ###    loss_func, self._fake_optimizee_var_dict)()
+        prev_loss = loss_func(mock_func=_wrap_variable_creation, 
+                              var_dict=self._fake_optimizee_var_dict)()
+        ###prev_loss = _wrap_variable_creation(loss_func, self._fake_optimizee_var_dict)()
 
         for t in range(self._len_unroll):
             # Calculate the updates from the rnn
@@ -243,9 +243,10 @@ class MetaOptimizer():
             self._fake_optimizee_var_dict = fake_var_dict
             self._fake_optimizee_vars = fake_vars
 
+            prev_loss = loss_func(mock_func=_wrap_variable_creation, 
+                              var_dict=self._fake_optimizee_var_dict)()
             ###prev_loss = _wrap_variable_creation(
             ###    loss_func, self._fake_optimizee_var_dict)()
-            prev_loss = loss_func(custom_getter=callable_custom_getter)()
 
             # Add the loss of the optmizee after the update step to the meta
             # loss weighted by w_t for the current time step
