@@ -6,11 +6,12 @@ from collections import namedtuple
 import tensorflow as tf
 import numpy as np
 import mock
+import os
 
 from l2l.utils import *
 from l2l import networks
 from tensorflow_utils import variable_summaries
-
+import pickle
 
 #MetaOptimizerRNN = namedtuple('MetaOptimizerRNN', 'rnn, rnn_hidden_state, flat_helper')
 
@@ -45,7 +46,8 @@ class MetaOptimizer():
                  w_ts=None,
                  lr=0.001, # Scale the deltas from the optimizer
                  meta_lr=0.01, # The lr for the meta optimizer (not for fx)
-                 name='MetaOptimizer'):
+                 name='MetaOptimizer',
+                 load_from_file=None):
         '''An optimizer that mimics the API of tf.train.Optimizer
         ARGS:
             - optimizer_type: The type of RNN you want to use for the metaoptimizer
@@ -87,9 +89,25 @@ class MetaOptimizer():
 
                 # Get all trainable variables in the given scope and create 
                 # an independent optimizer to optimize all vars in scope
-                optimizer = self._init_optimizer({}, scope, name='optimizer'+str(i))
+                optimizer = self._init_optimizer({}, scope, name='optimizer'+str(i), load_from_file=load_from_file)
                 self._optimizers.append(optimizer)
 
+    def save(self, sess, path=None):
+        """Save meta-optimizer."""
+        result = {}
+        k = 0
+        for net in self._optimizers:
+            if path is None:
+                filename = 'save_log.obj'
+                key = k
+                k += 1
+            else:
+                filename = os.path.join(path, "{}.l2l".format(k))
+                key = filename
+            net_vars = networks.save(net[0], sess, filename=filename)
+            result[key] = net_vars
+
+        return result
 
     ##### WEIRD HACKS & STUFF ##################################################
     def _create_fakes(self, prev_vars):
@@ -169,15 +187,24 @@ class MetaOptimizer():
 
 
     ##### OPTIMIZER FUNCTIONS ##################################################
-    def _init_optimizer(self, optimizer_options, scope, name='optimizer'):
+    def _init_optimizer(self, optimizer_options, scope, name='optimizer',load_from_file=None):
         '''Creates a named tuple of FlatteningHelper and Network objects'''
         flat_helper = FlatteningHelper(scope)
         with tf.variable_scope(name):
+            net_init = None
+            if load_from_file != None:
+                with open(load_from_file, "rb") as f:
+                    net_init = pickle.load(f)
+
             rnn = self._OptimizerType(output_size=flat_helper.flattened_shape,
                                       layers=self._rnn_layers,
                                       scale=self._lr,
-                                      name='LSTM') #name='Something else')
+                                      name='LSTM',
+                                      initializer=net_init) #name='Something else')
+
             intitial_hidden_state = None
+
+
         return [rnn, intitial_hidden_state, flat_helper]#MetaOptimizerRNN(rnn, intitial_hidden_state, flat_helper)
 
     def _meta_loss(self, loss_func):

@@ -31,7 +31,7 @@ class MLP():
     def __init__(self,
                  x,
                  y_,
-                 hidden_sizes=[1],
+                 hidden_sizes=[2,2],
                  scope = 'init_graph',
                  activation=selu):
 
@@ -90,17 +90,17 @@ class MLP():
                 variable_summaries(w, name='w_'+str(i))
                 variable_summaries(b, name='b_'+str(i))
 
-        # Run the graph with weights ws and biases bs 
+        # Run the graph with weights ws and biases bs
         with tf.name_scope('run_graph'):
             # Process the layers
             prev_out = x
             # Process hidden layers
             for i, (w, b) in enumerate(zip(ws[:-1], bs[:-1])):
                 with tf.variable_scope('layer'+str(i)):
-                    prev_out = self.act(tf.matmul(prev_out, w) + b)
+                    prev_out = self.act(tf.matmul(prev_out, w)) + b
             # Process output layer
             with tf.variable_scope('layer_out'):
-                return self.act(tf.matmul(prev_out, ws[-1]) + bs[-1])
+                return self.act(tf.matmul(prev_out, ws[-1])) + bs[-1]
 
 
 ################################################################################
@@ -132,7 +132,7 @@ def train(parameter_dict):
             tf.summary.scalar('loss', loss)
         with tf.name_scope('accuracy'):
             # Using cosine similarity for the sqaure root estimator
-            
+
             # Both need to be normalized (use label norms for both preds & labels)
             norm_y_ = tf.sqrt(tf.reduce_sum(tf.multiply(y_,y_)))
             normalized_y_ = y_ / norm_y_
@@ -148,8 +148,8 @@ def train(parameter_dict):
         # Meta optimization
         optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
         train_step, train_step_meta = optimizer.minimize(loss_func=loss_func)
-        ###optimizer = tf.train.AdamOptimizer(0.001)
-        ###train_step = optimizer.minimize(loss); train_step_meta = loss
+        #optimizer = tf.train.AdamOptimizer(0.001)
+        #train_step = optimizer.minimize(loss)
 
         merged = tf.summary.merge_all()
         writer = tf.summary.FileWriter('./logs/simple', graph=sess.graph)
@@ -185,10 +185,59 @@ def train(parameter_dict):
                 for i in range(min(len(tr_label), 10)):
                     print('Pred: {}, Actual: {} -- Input: {}'.format(predicted[i], tr_label[i], tr_data[i]))
 
+
+
             else:
                 acc, _, _, predicted, loss_ = sess.run(
                             [accuracy, train_step, train_step_meta, y, loss], 
                             feed_dict={x: tr_data, y_: tr_label})
+
+
+        optimizer.save(sess)
+
+        # Meta optimization
+        optimizer2 = MetaOptimizer(shared_scopes, name='MetaOptSimple', load_from_file='save_log.obj')
+        train_step, train_step_meta = optimizer2.minimize(loss_func=loss_func)
+
+        # Initialize Variables
+        tf.global_variables_initializer().run()
+
+        ################ Run the graph #########################################
+        for i in range(parameter_dict['num_batches']):
+            tr_data, tr_label = simple_problem(parameter_dict['batch_size'])
+
+            # Save summaries and print
+            if i % parameter_dict['print_every'] == 0:
+                # Print out variables to paste into script to test easily
+                print('\nvariables = {')
+                for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='init_graph'):
+                    print("\t'{}': {},".format(
+                        var.name.split(':')[0].split('/')[-1], var.eval().tolist()))
+                print('}')
+
+                # Run all the stuff
+                summary, acc, _, _, predicted, loss_ = sess.run(
+                    [merged, accuracy, train_step, train_step_meta, y, loss],
+                    feed_dict={x: tr_data, y_: tr_label})
+
+
+                # Write out summary at current time_step
+                writer.add_summary(summary, i)
+
+                # Print stuff out
+                print('\nIteration: {}, accuracy: {}, loss: {}'.format(i, acc, loss_))
+                print('Predictions & Answers')
+                for i in range(min(len(tr_label), 10)):
+                    print('Pred: {}, Actual: {} -- Input: {}'.format(predicted[i], tr_label[i], tr_data[i]))
+
+
+
+            else:
+                acc, _, _, predicted, loss_ = sess.run(
+                    [accuracy, train_step, train_step_meta, y, loss],
+                    feed_dict={x: tr_data, y_: tr_label})
+
+
 
 
 
@@ -200,7 +249,7 @@ if __name__ == "__main__":
         'hidden_size': 10,
         'gamma': 0,
         'batch_size': 20,
-        'num_batches': 1001,
+        'num_batches': 101,
         'learning_rate': 0.001,
         'print_every': 5,
         'M': 1,
