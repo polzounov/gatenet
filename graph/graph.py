@@ -91,7 +91,6 @@ class Graph():
       logits = self.output_layer(next_input)
       return logits
 
-
   def determine_gates(self, image, x, sess):
     '''Output the values of the gates for image'''
     # TODO: Make gates work with varying # of modules per layer or
@@ -102,3 +101,34 @@ class Graph():
                    feed_dict={x:image})
       gates[i] = np.array(g)
     return gates
+
+  def scopes(self, scope_type='modules'):
+    scope_type = scope_type.lower() # To lowercase
+    if (scope_type == 'modules') or (scope_type == 'm'):
+      scopes = []
+      for l in range(self.L):
+        for mod in range(self.M):
+          # Modules in gated layers
+          scope = 'init_graph/gated_layer'+str(layer)+'/module_'+str(mod)
+          scopes.append(scope)
+        # Gates in gated layers
+        scope = 'init_graph/gated_layer'+str(layer)+'/gates'
+        scopes.append(scope)
+      # Linear module in output layer
+      scope = 'init_graph/output_layer/module'
+      scopes.append(scope)
+      return scopes
+    elif (scope_type == 'layers') or (scope_type == 'l'):
+      scopes = []
+      for layer in range(self.L):
+        # Gated layers
+        scope = 'init_graph/gated_layer'+str(layer)
+        scopes.append(scope)
+      # Output layer
+      scope = 'init_graph/output_layer'
+      scopes.append(scope)
+      return scopes
+    elif (scope_type == 'graph') or (scope_type == 'g'):
+      return ['init_graph']
+    else:
+      raise ValueError('The scope {} is not supported'.format(scope_type))

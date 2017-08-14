@@ -1,3 +1,8 @@
+# The following code is taken from the learning to learn library from deepmind
+# https://github.com/deepmind/learning-to-learn
+#==============================================================================
+
+
 # Copyright 2016 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,6 +156,54 @@ def _get_layer_initializers(initializers, layer_name, fields):
   return _get_initializers(initializers, fields)
 
 
+
+'''
+################################################################################
+class DeepLSTM(Network):
+  """docstring for LSTM"""
+
+  def __init__(self,
+               output_size,
+               batch_size=1,
+               layers=(5, 5),  # Each el is the hidden size of the respective RNN cell (for deep RNNs)
+               scale=1.0,
+               name='LSTM',
+               initializer=None):
+    super(DeepLSTM, self).__init__(name=name)
+    self._batch_size = batch_size
+    self._layers = layers
+    self._scale = scale
+
+    with tf.variable_scope(self._template.variable_scope):
+      # Create cores (layers of a single RNN timestep)
+      self._cores = []
+      for i, size in enumerate(self._layers, start=1):
+        name = "lstm_{}".format(i)
+        init = _get_layer_initializers(initializer, name, ("w_gates", "b_gates"))
+        self._cores.append(snt.LSTM(size, name=name, initializers=init))
+
+      # Create the Deep RNN
+      self._rnn = snt.DeepRNN(self._cores, skip_connections=False, name="deep_rnn")
+
+      # Linear layer to get the output
+      init = _get_layer_initializers(initializer, "linear", ("w", "b"))
+      self._linear = snt.Linear(output_size, name="linear", initializers=init)
+
+
+    def _build(self, inputs, prev_state):
+      ##inputs = self._preprocess(tf.expand_dims(inputs, -1))
+      # Incorporates preprocessing into data dimension
+      inputs = tf.reshape(inputs, [inputs.get_shape().as_list()[0], -1])
+      output, next_state = self._rnn(inputs, prev_state)
+      return self._linear(output) * self._scale, next_state
+
+    def initial_state_for_inputs(self, inputs, **kwargs):
+        batch_size = inputs.get_shape().as_list()[0]
+        return self._rnn.initial_state(batch_size, **kwargs)
+
+'''
+
+################################################################################
 class StandardDeepLSTM(Network):
   """LSTM layers with a Linear layer on top."""
 
@@ -171,7 +224,6 @@ class StandardDeepLSTM(Network):
           "zeros" will be converted to tf.zeros_initializer).
       name: Module name.
     """
-    ######### CHRIS CHANGED CODE
     super(StandardDeepLSTM, self).__init__(name=name)
 
     self._output_size = output_size
@@ -211,86 +263,19 @@ class StandardDeepLSTM(Network):
     # Incorporates preprocessing into data dimension.
     inputs = tf.reshape(inputs, [inputs.get_shape().as_list()[0], -1])
     output, next_state = self._rnn(inputs, prev_state)
-    return self._linear(output) * self._scale, next_state
+
+    output = tf.transpose(output)
+    output = self._linear(output)
+    output = tf.transpose(output)
+    output = tf.reduce_sum(output, axis=1)
+    return output*self._scale, next_state
 
   def initial_state_for_inputs(self, inputs, **kwargs):
     batch_size = inputs.get_shape().as_list()[0]
     return self._rnn.initial_state(batch_size, **kwargs)
 
 
-
-
-
-
-
-##############################################################################
-##############################################################################
-##############################################################################
-##############################################################################
-##############################################################################
-##############################################################################
-# Module Wise Parameter Sharing
-
-
-class ModuleWiseDeepLSTM(StandardDeepLSTM):
-  """Module-wise `DeepLSTM`."""
-
-  def __init__(self, name="mw_deep_lstm", **kwargs):
-    """Creates an instance of `CoordinateWiseDeepLSTM`.
-
-    Args:
-      name: Module name.
-      **kwargs: Additional `DeepLSTM` args.
-    """
-    super(ModuleWiseDeepLSTM, self).__init__(1, name=name, **kwargs)
-
-  def _reshape_inputs(self, inputs):
-    return tf.reshape(inputs, [-1, 1])
-
-  def _build(self, inputs, prev_state):
-    """Connects the CoordinateWiseDeepLSTM module into the graph.
-
-    Args:
-      inputs: Arbitrarily shaped `Tensor`.
-      prev_state: `DeepRNN` state.
-
-    Returns:
-      `Tensor` shaped as `inputs`.
-    """
-
-    input_shape = inputs.get_shape().as_list()
-    print(input_shape)
-    reshaped_inputs = self._reshape_inputs(inputs)
-
-    build_fn = super(ModuleWiseDeepLSTM, self)._build
-    output, next_state = build_fn(reshaped_inputs, prev_state)
-
-    # Recover original shape.
-    return tf.reshape(output, input_shape), next_state
-
-  def initial_state_for_inputs(self, inputs, **kwargs):
-    reshaped_inputs = self._reshape_inputs(inputs)
-    return super(ModuleWiseDeepLSTM, self).initial_state_for_inputs(
-        reshaped_inputs, **kwargs)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+################################################################################
 class CoordinateWiseDeepLSTM(StandardDeepLSTM):
   """Coordinate-wise `DeepLSTM`."""
 
@@ -301,7 +286,7 @@ class CoordinateWiseDeepLSTM(StandardDeepLSTM):
       name: Module name.
       **kwargs: Additional `DeepLSTM` args.
     """
-    super(CoordinateWiseDeepLSTM, self).__init__(1, name=name, **kwargs)
+    super(CoordinateWiseDeepLSTM, self).__init__(name=name, **kwargs)
 
   def _reshape_inputs(self, inputs):
     return tf.reshape(inputs, [-1, 1])
@@ -331,39 +316,7 @@ class CoordinateWiseDeepLSTM(StandardDeepLSTM):
         reshaped_inputs, **kwargs)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+################################################################################
 class KernelDeepLSTM(StandardDeepLSTM):
   """`DeepLSTM` for convolutional filters.
 
@@ -399,7 +352,11 @@ class KernelDeepLSTM(StandardDeepLSTM):
       `Tensor` shaped as `inputs`.
     """
     input_shape = inputs.get_shape().as_list()
+    print('Building KernelDeepLSTM:')
+    print('\t- input_shape   :', input_shape)
     reshaped_inputs = self._reshape_inputs(inputs)
+    reshaped_shape = reshaped_inputs.get_shape().as_list()
+    print('\t- reshaped_shape:', reshaped_shape)
 
     build_fn = super(KernelDeepLSTM, self)._build
     output, next_state = build_fn(reshaped_inputs, prev_state)
@@ -415,21 +372,25 @@ class KernelDeepLSTM(StandardDeepLSTM):
         reshaped_inputs, **kwargs)
 
 
+################################################################################
 class Sgd(Network):
   """Identity network which acts like SGD."""
 
-  def __init__(self, learning_rate=0.001, name="sgd"):
+  def __init__(self, scale=0.001,
+               layers=None, output_size=None, # Ignore these
+               name="sgd"):
     """Creates an instance of the Identity optimizer network.
 
     Args:
       learning_rate: constant learning rate to use.
       name: Module name.
     """
-    super(Sgd, self).__init__(name)
-    self._learning_rate = learning_rate
+    super(Sgd, self).__init__(name=name)
+    self._learning_rate = scale
 
-  def _build(self, inputs, _):
-    return -self._learning_rate * inputs, []
+  def _build(self, inputs, state):
+    new_state = state
+    return -self._learning_rate * inputs, new_state
 
   def initial_state_for_inputs(self, inputs, **kwargs):
     return []
@@ -446,11 +407,12 @@ def _debias_adam_estimate(estimate, b, t):
 class Adam(Network):
   """Adam algorithm (https://arxiv.org/pdf/1412.6980v8.pdf)."""
 
-  def __init__(self, learning_rate=1e-3, beta1=0.9, beta2=0.999, epsilon=1e-8,
+  def __init__(self, scale=1e-3, beta1=0.9, beta2=0.999, epsilon=1e-8,
+               layers=None, output_size=None, # Ignore these
                name="adam"):
     """Creates an instance of Adam."""
     super(Adam, self).__init__(name=name)
-    self._learning_rate = learning_rate
+    self._learning_rate = scale
     self._beta1 = beta1
     self._beta2 = beta2
     self._epsilon = epsilon
@@ -482,3 +444,4 @@ class Adam(Network):
     m = tf.zeros((batch_size, 1), dtype=dtype)
     v = tf.zeros((batch_size, 1), dtype=dtype)
     return (t, m, v)
+
