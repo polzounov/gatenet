@@ -67,7 +67,7 @@ class FlatteningHelper():
             flattened_tensors = [tf.reshape(var, [-1, 1]) for var in input_tensors]
             flattened_tensor = tf.concat(flattened_tensors, axis=0)
 
-            if flattened_tensor.get_shape().as_list()[0] is not self.flattened_shape:
+            if flattened_tensor.get_shape().as_list()[0] != self.flattened_shape:
                 raise ValueError('self.flattened shape is',
                                  self.flattened_shape,
                                  ', but for these inputs the flattened shape is',
@@ -84,7 +84,7 @@ class FlatteningHelper():
         eg [g1_flattened, g2_flattened, ...] -> [(g1, v1), (g2, v2)]
         Returns in the form of a list of (delta, variable) 
         '''
-        if flattened_deltas.get_shape().as_list()[0] is not self.flattened_shape:
+        if flattened_deltas.get_shape().as_list()[0] != self.flattened_shape:
             raise ValueError('Incorrect input size to unflatten :',
                     '\n\t self.flattened shape is:', 
                     self.flattened_shape, 
