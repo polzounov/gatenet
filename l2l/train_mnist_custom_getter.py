@@ -25,14 +25,15 @@ class MLP():
     def __init__(self,
                  x,
                  y_,
-                 hidden_sizes=[20,20,20],
+                 hidden_sizes=[10,10,10],
                  scope = 'init_graph',
                  activation=selu):
 
         _, b = x.get_shape().as_list()
         _, d = y_.get_shape().as_list()
-        init_w = tf.contrib.keras.initializers.he_uniform()#tf.contrib.layers.xavier_initializer(uniform=True, dtype=tf.float32)#
-        init_b = tf.constant_initializer(0.01)
+        #tf.contrib.keras.initializers.he_uniform()#
+        init_w = tf.contrib.layers.xavier_initializer(uniform=True, dtype=tf.float32)#
+        init_b = tf.constant_initializer(0)
 
         self.scope = scope
         self.hidden_sizes = hidden_sizes
@@ -103,11 +104,11 @@ class MLP():
 def train(parameter_dict):
     with tf.Session() as sess:
 
-        k_shot = 10
-        num_classes = 10
+        k_shot = 4
+        num_classes = 5
         num_test_images = 5
-        omniglot_path = '../datasets/omniglot'
-        metaDataManager = MetaDataManager(omniglot_path, dataset='omniglot', load_images_in_memory=False)
+        mnist_path = '../datasets/mnist'
+        metaDataManager = MetaDataManager(mnist_path, dataset='mnist', load_images_in_memory=False)
         metaDataManager.build_dataset(num_classes, k_shot, num_test_images)
 
         # Input placeholders
@@ -136,7 +137,8 @@ def train(parameter_dict):
             tf.summary.scalar('loss', loss)
         with tf.name_scope('accuracy'):
             # Using cosine similarity for the sqaure root estimator
-            # Both need to be normalized (use label norms for both preds & labels)
+            # Both need to be normalized (use label norms for both preds & labe
+            # ls)
             correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
             tf.summary.scalar('accuracy', accuracy)
@@ -161,19 +163,25 @@ def train(parameter_dict):
         ################ Run the graph #########################################
         for i in range(parameter_dict['num_batches']):
             images, labels = metaDataManager.get_train_batch()
-            tr_data = np.reshape(images, (-1, 105*105))
+
+            tr_data = np.reshape(images, (-1, 28*28))
 
             tr_label = np.zeros((len(labels), num_classes))
             tr_label[np.arange(len(labels)), labels] = 1
 
+
             # Save summaries and print
             if i % parameter_dict['print_every'] == 0:
+
+
                 # Print out variables to paste into script to test easily
                 print('\nvariables = {')
                 for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='init_graph'):
-                    print("\t'{}': {},".format(
-                        var.name.split(':')[0].split('/')[-1], var.eval().tolist()))
+                    if 'w' in var.name:
+                        print("\t'{}': {},".format(
+                            var.name.split(':')[0].split('/')[-1], var.eval().tolist()))
                 print('}')
+
 
                 # Run all the stuff
                 summary, acc, _, _, predicted, loss_ = sess.run(
@@ -183,11 +191,15 @@ def train(parameter_dict):
                 # Write out summary at current time_step
                 #writer.add_summary(summary, i)
 
+
+                print('Accuracy: {}, Loss: {}'.format(acc,loss_))
+                print('Predictions: {}'.format(predicted))
+
                 # Print stuff out
-                print('\nIteration: {}, accuracy: {}, loss: {}'.format(i, acc, loss_))
-                print('Predictions & Answers')
-                for i in range(min(len(tr_label), 10)):
-                    print('Accuracy: {}'.format(accuracy))
+                #print('\nIteration: {}, accuracy: {}, loss: {}'.format(i, acc, loss_))
+                #print('Predictions & Answers')
+                #for i in range(min(len(tr_label), 10)):
+                    #print('Accuracy: {}'.format(accuracy))
 
             else:
                 acc, _, _, predicted, loss_ = sess.run(
@@ -206,7 +218,7 @@ if __name__ == "__main__":
         'hidden_size': 10,
         'gamma': 0,
         'batch_size': 20,
-        'num_batches': 101,
+        'num_batches': 10001,
         'learning_rate': 0.001,
         'print_every': 1,
         'M': 1,
