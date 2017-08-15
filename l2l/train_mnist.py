@@ -20,7 +20,7 @@ from timing import *
 def train(parameter_dict):
     with tf.Session() as sess:
 
-        k_shot = 4
+        k_shot = 2
         num_classes = parameter_dict['C']
         num_test_images = 5
         mnist_path = '../datasets/mnist'
@@ -70,10 +70,10 @@ def train(parameter_dict):
         shared_scopes = ['init_graph']
 
         # Meta optimization
-        #optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
-        #train_step, train_step_meta = optimizer.minimize(loss_func=loss_func)
-        optimizer = tf.train.AdamOptimizer(0.001)
-        train_step = optimizer.minimize(loss); train_step_meta = loss
+        optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
+        train_step, train_step_meta = optimizer.minimize(loss_func=loss_func)
+        #optimizer = tf.train.AdamOptimizer(0.001)
+        #train_step = optimizer.minimize(loss); train_step_meta = loss
 
         merged = tf.summary.merge_all()
         writer = tf.summary.FileWriter('./logs/simple', graph=sess.graph)
@@ -95,7 +95,7 @@ def train(parameter_dict):
             # Save summaries and print
             if i % parameter_dict['print_every'] == 0:
 
-
+                '''
                 # Print out variables to paste into script to test easily
                 print('\nvariables = {')
                 for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='init_graph'):
@@ -103,7 +103,7 @@ def train(parameter_dict):
                         print("\t'{}': {},".format(
                             var.name.split(':')[0].split('/')[-1], var.eval().tolist()))
                 print('}')
-
+                '''
 
 
                 # Run all the stuff
@@ -116,8 +116,10 @@ def train(parameter_dict):
 
 
                 print('Accuracy: {}, Loss: {}'.format(acc,loss_))
-                print('Predictions: {}'.format(predicted))
 
+                '''
+                print('Predictions: {}'.format(predicted))
+                '''
 
                 # Print stuff out
                 #print('\nIteration: {}, accuracy: {}, loss: {}'.format(i, acc, loss_))
@@ -137,15 +139,15 @@ if __name__ == "__main__":
     parameter_dict = {
         'C': 5,
         'sublayer_type': AdditionSublayerModule,
-        'hidden_size': 10,
+        'hidden_size': 2,
         'gamma': 0,
-        'batch_size': 20,
+        'batch_size': 10,
         'num_batches': 10001,
         'learning_rate': 0.001,
-        'print_every': 10,
+        'print_every': 1,
         'M': 1,
-        'L': 2,
-        'module_type': PerceptronModule,
+        'L': 1,
+        'module_type': ConvModule,
     }
 
     train(parameter_dict)
