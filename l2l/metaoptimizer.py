@@ -14,11 +14,28 @@ from tensorflow_utils import variable_summaries
 import pickle
 
 
-def _custom_getter(name, *args, var_dict=None, use_real_getter=False, **kwargs):
+def _custom_getter(name,
+                  *args,
+                  var_dict=None,
+                  graph_type='gatenet',
+                  use_real_getter=False,
+                  **kwargs):
     if var_dict is None:
         raise AttributeError('No var dictionary is given')
+    
+    # Make a non hacky version!
+    if graph_type == 'gatenet':
+        var_name = _get_name(name, var_dict)
+    elif graph_type == 'mlp':
+        current_scope = tf.contrib.framework.get_name_scope()
+        print('\nScope:', current_scope)
+        current_scope = current_scope.split('init_graph')[-1].split('/')[-1]
+        var_name = 'init_graph/' + current_scope + '/' + name + ':0'
+    else:
+        raise NotImplementedError('Pick either gatenet or mlp for variable mocking')
+
     # Return the var or tensor
-    return var_dict[name+':0']
+    return var_dict[var_name+':0']
 
 
 def _wrap_variable_creation(func, var_dict):
@@ -31,6 +48,18 @@ def _wrap_variable_creation(func, var_dict):
     # Mock the get_variable method.
     with mock.patch('tensorflow.get_variable', custom_get_variable):
         return func()
+
+
+def _get_name(name, var_dict):
+    current_scope = tf.contrib.framework.get_name_scope()
+    if 'gates' in current_scope: # This is gates module
+        current_layer = current_scope.split('/')[3]
+        return 'init_graph/' + current_layer + '/gates/snt_linear_unit/' + name
+    elif 'module' in current_scope:
+        current_layer = current_scope.split('/')[3]
+        current_module = current_scope.split('/')[4]
+        module_type = current_scope.split('/')[-1]
+        return 'init_graph/' + current_layer + '/' + current_module + '/' + module_type + '/' + name
 
 
 class MetaOptimizer():
@@ -219,7 +248,9 @@ class MetaOptimizer():
 
         # Makes the custom getter callable!!!!
         def callable_custom_getter(*args, **kwargs):
-            return _custom_getter(*args, var_dict=self._fake_optimizee_var_dict, **kwargs)
+            return _custom_getter(*args,
+                                  var_dict=self._fake_optimizee_var_dict,
+                                  **kwargs)
 
         if self._w_ts is None:
             # Time step weights are all equal as in paper
@@ -227,7 +258,7 @@ class MetaOptimizer():
 
         meta_loss = 0
         prev_loss = loss_func(mock_func=_wrap_variable_creation, 
-                              var_dict=self._fake_optimizee_var_dict)()
+                              var_dict=self._fake_optimizee_var_dict)
         ###prev_loss = _wrap_variable_creation(loss_func, self._fake_optimizee_var_dict)()
 
         for t in range(self._len_unroll):
@@ -241,7 +272,7 @@ class MetaOptimizer():
             self._fake_optimizee_vars = fake_vars
 
             prev_loss = loss_func(mock_func=_wrap_variable_creation, 
-                              var_dict=self._fake_optimizee_var_dict)()
+                              var_dict=self._fake_optimizee_var_dict)
             ###prev_loss = _wrap_variable_creation(
             ###    loss_func, self._fake_optimizee_var_dict)()
 
