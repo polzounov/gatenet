@@ -13,7 +13,6 @@ from dataset_loading.data_managers import *
 from timing import *
 
 
-
 ################################################################################
 ######                        MAIN PROGRAM                                ######
 ################################################################################
@@ -76,8 +75,8 @@ def train(parameter_dict):
         #train_step = optimizer.minimize(loss); train_step_meta = loss
 
         merged = tf.summary.merge_all()
-        writer = tf.summary.FileWriter('./logs/simple', graph=sess.graph)
-        # Command to run: tensorboard --logdir=l2l/logs/simple
+        writer = tf.summary.FileWriter('./logs/mnist', graph=sess.graph)
+        # Command to run: tensorboard --logdir=l2l/logs/mnist
 
         # Initialize Variables
         tf.global_variables_initializer().run()
@@ -115,14 +114,11 @@ def train(parameter_dict):
                 #writer.add_summary(summary, i)
 
 
-                print('Accuracy: {}, Loss: {}'.format(acc,loss_))
-
-                '''
-                print('Predictions: {}'.format(predicted))
-                '''
-
                 # Print stuff out
-                #print('\nIteration: {}, accuracy: {}, loss: {}'.format(i, acc, loss_))
+                print('\nIteration: {}, accuracy: {}, loss: {}'.format(i, acc, loss_))
+                print('Predictions: {}'.format(predicted))
+
+
                 #print('Predictions & Answers')
                 #for i in range(min(len(tr_label), 10)):
                     #print('Accuracy: {}'.format(accuracy))
@@ -142,7 +138,7 @@ if __name__ == "__main__":
         'hidden_size': 2,
         'gamma': 0,
         'batch_size': 10,
-        'num_batches': 10001,
+        'num_batches': 11,
         'learning_rate': 0.001,
         'print_every': 1,
         'M': 1,
