@@ -14,9 +14,6 @@ from tensorflow_utils import variable_summaries
 import pickle
 
 
-#MetaOptimizerRNN = namedtuple('MetaOptimizerRNN', 'rnn, rnn_hidden_state, flat_helper')
-
-
 def _custom_getter(name, *args, var_dict=None, use_real_getter=False, **kwargs):
     if var_dict is None:
         raise AttributeError('No var dictionary is given')
@@ -209,7 +206,7 @@ class MetaOptimizer():
                                       name='LSTM', #name='Something else'
                                       initializer=net_init)
             intitial_hidden_state = None
-        return [rnn, intitial_hidden_state, flat_helper]#MetaOptimizerRNN(rnn, intitial_hidden_state, flat_helper)
+        return [rnn, intitial_hidden_state, flat_helper]
 
     def _meta_loss(self, loss_func):
         '''Takes `optimizee_loss_func` applies a gradient step (to the optimizee
@@ -290,7 +287,7 @@ class MetaOptimizer():
                     # into single tensor (k,)
                     flattened_grads = flat_helper.flatten(matching_grads)
 
-                    # If first run set initial intputs ########## This is hacky!!! Fix this ###############
+                    # If first run set initial intputs
                     if prev_state is None:
                         prev_state = RNN.initial_state_for_inputs(flattened_grads)
 
@@ -298,7 +295,7 @@ class MetaOptimizer():
                     flattened_deltas, next_state = RNN(flattened_grads, prev_state)
 
                     # Set the new hidden state for the optimizer
-                    optimizer.rnn_hidden_state = next_state ############### TEST THIS !!!! ################
+                    optimizer.rnn_hidden_state = next_state
 
                     # Get deltas back into original form
                     deltas = flat_helper.unflatten(flattened_deltas)
@@ -340,7 +337,7 @@ class MetaOptimizer():
                     # into single tensor (k,)
                     flattened_grads = flat_helper.flatten(gradients)
 
-                    # If first run set initial intputs ########## This is hacky!!! Fix this ###############
+                    # If first run set initial intputs
                     if prev_state is None:
                         prev_state = RNN.initial_state_for_inputs(flattened_grads)
 
@@ -348,7 +345,7 @@ class MetaOptimizer():
                     flattened_deltas, next_state = RNN(flattened_grads, prev_state)
 
                     # Set the new hidden state for the optimizer
-                    self._optimizers[i][1] = next_state ########## TEST THIS !!!! #############
+                    self._optimizers[i][1] = next_state
 
                     # Get deltas back into original form
                     deltas = flat_helper.unflatten(flattened_deltas)
