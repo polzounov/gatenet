@@ -27,8 +27,8 @@ def train(parameter_dict=None):
     # Start session
     sess = tf.InteractiveSession()
 
-    omniglot_path = "/home/chris/images_background"
-    mnist_path = "/home/chris/mnist_png"
+    omniglot_path = '../datasets/omniglot'
+    mnist_path = '../datasets/mnist'
 
     k_shot = 10
     num_classes = 10

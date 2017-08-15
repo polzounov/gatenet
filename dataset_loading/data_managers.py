@@ -91,21 +91,7 @@ if __name__ == '__main__':
     k_fold = 5
     num_classes = 5
 
-    tiny_imagenet_path = "/home/chris/tiny-imagenet-200"
-    omniglot_path = "/home/chris/images_background"
-
-    imagenet_metaDataManager = MetaDataManager(tiny_imagenet_path, dataset='tiny-imagenet')
-    imagenet_metaDataManager.build_dataset(k_fold,num_classes,100)
-    images, labels = imagenet_metaDataManager.get_train_batch()
-
-    plt.figure(1)
-    count = 0
-    for i in range(num_classes):
-        for j in range(k_fold):
-            plt.subplot(num_classes,k_fold,count+1)
-            imgplot = plt.imshow(np.reshape(images[count], (64,64,3)))
-            count = count + 1
-    #plt.show()
+    omniglot_path = "../datasets/omniglot"
 
     omniglot_metaDataManager = MetaDataManager(omniglot_path,dataset='omniglot')
     omniglot_metaDataManager.build_dataset(k_fold,num_classes,5)
