@@ -36,12 +36,22 @@ def train(parameter_dict):
         ########## Define simple graph #########################################
         graph = Graph(parameter_dict)
 
+        # Get layer wise variable sharing for the meta optimizer
+        shared_scopes = graph.scopes(scope_type='graph')
+
         ########## Build the rest of the functions in the graph ################
         def loss_func(x=x, y_=y_, fx=graph.return_logits, mock_func=None, var_dict=None):
             def build():
                 y = fx(x)  # , custom_getter=custom_getter)
                 with tf.name_scope('loss'):
-                    return tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
+                    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
+
+                    # Add regularization to the weights in init_graph
+                    weights_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='init_graph')
+                    reg = tf.contrib.layers.l2_regularizer(0.1)
+                    loss += tf.contrib.layers.apply_regularization(reg, weights_list=weights_list)
+
+                    return loss
 
             # Run through the mock func (w fake vars)
             if (mock_func is not None) and (var_dict is not None):
@@ -64,9 +74,6 @@ def train(parameter_dict):
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
             tf.summary.scalar('accuracy', accuracy)
 
-
-        # Get layer wise variable sharing for the meta optimizer
-        shared_scopes = ['init_graph']
 
         # Meta optimization
         optimizer = MetaOptimizer(shared_scopes, name='MetaOptSimple')
@@ -116,7 +123,7 @@ def train(parameter_dict):
 
                 # Print stuff out
                 print('\nIteration: {}, accuracy: {}, loss: {}'.format(i, acc, loss_))
-                print('Predictions: {}'.format(predicted))
+                print('Predictions: {}\n'.format(predicted))
 
 
                 #print('Predictions & Answers')
@@ -138,7 +145,7 @@ if __name__ == "__main__":
         'hidden_size': 2,
         'gamma': 0,
         'batch_size': 10,
-        'num_batches': 11,
+        'num_batches': 101,
         'learning_rate': 0.001,
         'print_every': 1,
         'M': 1,
