@@ -376,9 +376,7 @@ class KernelDeepLSTM(StandardDeepLSTM):
 class Sgd(Network):
   """Identity network which acts like SGD."""
 
-  def __init__(self, scale=0.001,
-               layers=None, output_size=None, # Ignore these
-               name="sgd"):
+  def __init__(self, scale=0.001, name="sgd", **kwargs):
     """Creates an instance of the Identity optimizer network.
 
     Args:
@@ -408,8 +406,7 @@ class Adam(Network):
   """Adam algorithm (https://arxiv.org/pdf/1412.6980v8.pdf)."""
 
   def __init__(self, scale=1e-3, beta1=0.9, beta2=0.999, epsilon=1e-8,
-               layers=None, output_size=None, # Ignore these
-               name="adam"):
+               name="adam", **kwargs):
     """Creates an instance of Adam."""
     super(Adam, self).__init__(name=name)
     self._learning_rate = scale
