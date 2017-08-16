@@ -48,7 +48,7 @@ def train(parameter_dict):
 
                     # Add regularization to the weights in init_graph
                     weights_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='init_graph')
-                    reg = tf.contrib.layers.l2_regularizer(0.1)
+                    reg = tf.contrib.layers.l2_regularizer(100000000.)
                     loss += tf.contrib.layers.apply_regularization(reg, weights_list=weights_list)
 
                     return loss
@@ -101,7 +101,7 @@ def train(parameter_dict):
             # Save summaries and print
             if i % parameter_dict['print_every'] == 0:
 
-                '''
+                
                 # Print out variables to paste into script to test easily
                 print('\nvariables = {')
                 for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='init_graph'):
@@ -109,7 +109,7 @@ def train(parameter_dict):
                         print("\t'{}': {},".format(
                             var.name.split(':')[0].split('/')[-1], var.eval().tolist()))
                 print('}')
-                '''
+                
 
 
                 # Run all the stuff
@@ -145,7 +145,7 @@ if __name__ == "__main__":
         'hidden_size': 2,
         'gamma': 0,
         'batch_size': 10,
-        'num_batches': 101,
+        'num_batches': 5001,
         'learning_rate': 0.001,
         'print_every': 1,
         'M': 1,

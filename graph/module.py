@@ -7,14 +7,20 @@ import numpy as np
 import sonnet as snt
 from tensorflow_utils import *
 
-import sonnet as snt
-## Code for Sonnet Modules
 
+def selu(x):
+    alpha = 1.6732632423543772848170429916717
+    scale = 1.0507009873554804934193349852946
+    #return scale * tf.where(x >= 0.0, x, alpha * tf.exp(x) - alpha)
+    return scale * tf.contrib.keras.activations.elu(x, alpha)
+
+
+## Code for Sonnet Modules
 class ConvModule(snt.AbstractModule):
   def __init__(self,
                output_channels,
                kernel_shape=3,
-               activation=tf.nn.relu,
+               activation=selu,
                module_name='conv_module'):
     super(ConvModule, self).__init__(name=module_name)
     self._output_channels = output_channels
@@ -29,7 +35,7 @@ class ConvModule(snt.AbstractModule):
 class PerceptronModule(snt.AbstractModule):
   def __init__(self,
                hidden_size,
-               activation=tf.nn.relu,
+               activation=selu,
                module_name='perceptron_module'):
     super(PerceptronModule, self).__init__(name=module_name)
     self._activation = activation
