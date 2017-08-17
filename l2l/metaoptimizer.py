@@ -65,16 +65,17 @@ def _get_name(name, var_dict):
 class MetaOptimizer():
     def __init__(self, 
                  shared_scopes=['init_graph'],
-                 optimizer_type='ADAM',
-                 second_derivatives=True,
+                 optimizer_type='CoordinateWiseLSTM',
+                 second_derivatives=False,
                  params_as_state=False,
                  rnn_layers=(20,20),
                  len_unroll=1,
                  w_ts=None,
                  lr=0.001, # Scale the deltas from the optimizer
                  meta_lr=0.01, # The lr for the meta optimizer (not for fx)
-                 name='MetaOptimizer',
-                 load_from_file=None):
+                 load_from_file=None,
+                 save_summaries={},
+                 name='MetaOptimizer'):
         '''An optimizer that mimics the API of tf.train.Optimizer
         ARGS:
             - optimizer_type: The type of RNN you want to use for the metaoptimizer
@@ -95,9 +96,23 @@ class MetaOptimizer():
         #self._params_as_state = params_as_state # TODO: Implement
         self._rnn_layers = rnn_layers
         self._len_unroll = len_unroll
-        self._w_ts = w_ts
         self._lr = lr
+        self._w_ts = None
         self._meta_lr = meta_lr
+        self._save_summaries = save_summaries
+
+        # Use wt_s as list or use lambda function to calulcate the w_ts
+        if w_ts is None:
+            # Defualt in paper
+            self._w_ts = [1 for _ in range(self._len_unroll)]
+        if isinstance(w_ts, list):
+            self._w_ts = wt_s
+        elif callable(w_ts):
+            # Use function and len unroll to calculate w_ts
+            # https://stackoverflow.com/questions/624926/
+            self._w_ts = w_ts(self._len_unroll)
+            else:
+                raise ValueError('w_ts should be a list or function')
         
         # Get all of the variables of the optimizee network ## TODO improve
         self._optimizee_vars = []
@@ -177,7 +192,7 @@ class MetaOptimizer():
                 matching_delta = None
                 for i, (g, v) in enumerate(deltas):
                     if v.name == real_var_name:
-                        new_fake_var -= g
+                        new_fake_var += g
 
                 # Reassign the value in the dict to be its 'copy' with the grad 
                 # subtracted
@@ -249,10 +264,6 @@ class MetaOptimizer():
             return _custom_getter(*args,
                                   var_dict=self._fake_optimizee_var_dict,
                                   **kwargs)
-
-        if self._w_ts is None:
-            # Time step weights are all equal as in paper
-            self._w_ts = [1. for _ in range(self._len_unroll)] 
 
         meta_loss = 0
         prev_loss = loss_func(mock_func=_wrap_variable_creation, 
@@ -412,8 +423,8 @@ class MetaOptimizer():
         meta_optimizer_vars = self._get_vars_in_scope(scope=self._scope)
 
         # Update step of adam to (only) the meta optimizer's variables
-        #optimizer = tf.train.AdamOptimizer(self._meta_lr)
-        #train_step_meta = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
+        optimizer = tf.train.AdamOptimizer(self._meta_lr)
+        train_step_meta = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
 
         # Update the original variables with the updates to the fake ones
         with tf.name_scope(self._scope+'/update_real_vars'):
@@ -421,5 +432,5 @@ class MetaOptimizer():
 
         # This is actually multiple steps of update to the optimizee and one 
         # step of optimization to the optimizer itself
-        return (train_step, train_step)#_meta)
+        return (train_step, train_step_meta)
 
