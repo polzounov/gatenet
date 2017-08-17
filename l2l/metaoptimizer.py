@@ -87,7 +87,6 @@ class MetaOptimizer():
                 layer but seperate between layers
                 - TODO: MAKE THIS DESCRIPTION MORE CLEAR #######################
             - name: The name of the MetaOptimizer
-                - # TODO: Scope the entire MetaOptimizer under name
         '''
 
         self._OptimizerType = self._get_optimizer(optimizer_type)
@@ -245,7 +244,6 @@ class MetaOptimizer():
             rnn = self._OptimizerType(output_size=flat_helper.flattened_shape,
                                       layers=self._rnn_layers,
                                       scale=self._lr,
-                                      name='LSTM', #name='Something else'
                                       initializer=net_init)
             intitial_hidden_state = None
         return [rnn, intitial_hidden_state, flat_helper]
@@ -259,7 +257,7 @@ class MetaOptimizer():
         function (eg. cross-entropy between predictions and labels on mnist)
         '''
 
-        # Makes the custom getter callable!!!!
+        # Makes the custom getter callable
         def callable_custom_getter(*args, **kwargs):
             return _custom_getter(*args,
                                   var_dict=self._fake_optimizee_var_dict,
@@ -268,7 +266,6 @@ class MetaOptimizer():
         meta_loss = 0
         prev_loss = loss_func(mock_func=_wrap_variable_creation, 
                               var_dict=self._fake_optimizee_var_dict)
-        ###prev_loss = _wrap_variable_creation(loss_func, self._fake_optimizee_var_dict)()
 
         for t in range(self._len_unroll):
             # Calculate the updates from the rnn
@@ -282,8 +279,6 @@ class MetaOptimizer():
 
             prev_loss = loss_func(mock_func=_wrap_variable_creation, 
                               var_dict=self._fake_optimizee_var_dict)
-            ###prev_loss = _wrap_variable_creation(
-            ###    loss_func, self._fake_optimizee_var_dict)()
 
             # Add the loss of the optmizee after the update step to the meta
             # loss weighted by w_t for the current time step
@@ -292,64 +287,8 @@ class MetaOptimizer():
         with tf.name_scope('final_meta_loss'):
             return tf.reduce_sum(meta_loss)
 
-    """
-    ############################################################################
-    ####### This does only one tf.gradients call and attempts to split those 
-    ####### grads  into multiple 'pieces'
-    ############################################################################
-    def _update_calc(self, fx):
-        '''Single step of the meta optimizer to calculate the delta updates for
-        the params of the optimizee network
-
-        fx is the optimizee loss func
-        x are all the variables in the network
-        '''
-        x = self._optimizee_vars
-        gradients = tf.gradients(fx, x)
-
-        # However it looks like things like BatchNorm, etc. don't support
-        # second-derivatives so we still need this term.
-        if not self._second_derivatives:
-            gradients = [tf.stop_gradient(g) for g in gradients]
-
-        with tf.name_scope('meta_optmizer_step'):
-            for optimizer in self._optimizers:
-                list_deltas = []
-                with tf.name_scope('deltas'):
-                    RNN = optimizer.rnn # same as optimizer[0]
-                    prev_state = optimizer.rnn_hidden_state # same as optimizer[1]
-                    flat_helper = optimizer.flat_helper # same as optimizer[2]
-
-                    # Get the gradients that match the current RNN
-                    matching_grads = flat_helper.matching_grads(gradients)
-
-                    # Flatten the gradients from list of (gradient, variable) 
-                    # into single tensor (k,)
-                    flattened_grads = flat_helper.flatten(matching_grads)
-
-                    # If first run set initial intputs
-                    if prev_state is None:
-                        prev_state = RNN.initial_state_for_inputs(flattened_grads)
-
-                    # Run step for the RNN optimizer
-                    flattened_deltas, next_state = RNN(flattened_grads, prev_state)
-
-                    # Set the new hidden state for the optimizer
-                    optimizer.rnn_hidden_state = next_state
-
-                    # Get deltas back into original form
-                    deltas = flat_helper.unflatten(flattened_deltas)
-                    list_deltas.append(deltas)
-
-            # Get `deltas` into form that `gradients` are in
-            merged_deltas = merge_var_lists(list_deltas)
-
-        return deltas
-    ############################################################################
-    """
-
     ###### This one call tf.gradients several times (since it's a static graph 
-    # it doesn't actually recalculate grads multiple times but combines them???)
+    # it doesn't actually recalculate grads multiple times but combines them?)
     def _update_calc(self, fx, x):
         '''Single step of the meta optimizer to calculate the delta updates for
         the params of the optimizee network
@@ -396,8 +335,7 @@ class MetaOptimizer():
         '''Performs the actual update of the optimizee's params'''
         with tf.name_scope('update_optimizee_params'):
             for grad, var in deltas:
-                print('\nvar : {}\ngrad: {}'.format(var, grad))
-                var =- grad # Update the variable with the delta
+                var =- grad
 
     def _real_update_step(self):
         train_steps = []
