@@ -102,16 +102,16 @@ class MetaOptimizer():
 
         # Use wt_s as list or use lambda function to calulcate the w_ts
         if w_ts is None:
-            # Defualt in paper
+            # Default in paper
             self._w_ts = [1 for _ in range(self._len_unroll)]
-        if isinstance(w_ts, list):
-            self._w_ts = wt_s
+        elif isinstance(w_ts, list):
+            self._w_ts = w_ts
         elif callable(w_ts):
             # Use function and len unroll to calculate w_ts
             # https://stackoverflow.com/questions/624926/
             self._w_ts = w_ts(self._len_unroll)
-            else:
-                raise ValueError('w_ts should be a list or function')
+        else:
+            raise ValueError('w_ts should be a list or function')
         
         # Get all of the variables of the optimizee network ## TODO improve
         self._optimizee_vars = []
