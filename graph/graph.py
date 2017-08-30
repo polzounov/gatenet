@@ -106,7 +106,7 @@ class Graph():
     scope_type = scope_type.lower() # To lowercase
     if (scope_type == 'modules') or (scope_type == 'm'):
       scopes = []
-      for l in range(self.L):
+      for layer in range(self.L):
         for mod in range(self.M):
           # Modules in gated layers
           scope = 'init_graph/gated_layer'+str(layer)+'/module_'+str(mod)
