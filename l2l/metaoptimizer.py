@@ -72,7 +72,8 @@ class MetaOptimizer():
                  len_unroll=20,
                  w_ts=None,
                  lr=0.001, # Scale the deltas from the optimizer
-                 meta_lr=0.01, # The lr for the meta optimizer (not for fx)
+                 meta_lr=0.01, # The lr for the meta optimizer (not for fx),
+                 additional_loss_scale=1,
                  load_from_file=None,
                  save_summaries={},
                  name='MetaOptimizer'):
@@ -99,6 +100,7 @@ class MetaOptimizer():
         self._w_ts = None
         self._meta_lr = meta_lr
         self._save_summaries = save_summaries
+        self._additional_loss_scale = additional_loss_scale
 
         # Use wt_s as list or use lambda function to calulcate the w_ts
         if w_ts is None:
@@ -394,7 +396,7 @@ class MetaOptimizer():
             train_steps.append(assign_step)
         return train_steps
 
-    def minimize(self, loss_func=None, additional_loss_func=None, additional_loss_scale=1.):
+    def minimize(self, loss_func, additional_loss_func=None):
         '''A series of updates for the optmizee network and a single step of 
         optimization for the meta optimizer
         '''
@@ -407,7 +409,7 @@ class MetaOptimizer():
 
         # Optional: Return metaloss for the additional loss
         if additional_loss_func is not None:
-            meta_loss += additional_loss_scale * self._meta_loss(additional_loss_func, update_vars=False)
+            meta_loss += self._additional_loss_scale * self._meta_loss(additional_loss_func, update_vars=False)
 
         # Get all trainable variables from the meta_optimizer itself
         # For scoping the variables to train with a step of ADAM (make sure
@@ -424,5 +426,5 @@ class MetaOptimizer():
 
         # This is actually multiple steps of update to the optimizee and one 
         # step of optimization to the optimizer itself
-        return (train_step, train_step_meta)
+        return (train_step, train_step_meta, meta_loss)
 
