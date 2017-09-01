@@ -5,6 +5,19 @@ from __future__ import print_function
 import tensorflow as tf
 import sonnet as snt
 import numpy as np
+import time
+
+def print_time(input_func):
+    def timed(*args, **kwargs):
+        start_time = time.time()
+        result = input_func(*args, **kwargs)
+        end_time = time.time()
+        print("Method Name - {0}, Execution Time - {3}".format(
+            input_func.__name__, args, kwargs, end_time - start_time))
+        return result
+
+    return timed
+
 
 class FlatteningHelper():
     """This class takes in a variable scope and can flatten and unflatten them
@@ -46,6 +59,7 @@ class FlatteningHelper():
             prod *= el
         return prod
 
+    @print_time
     def matching_grads(self, list_of_grads):
          '''Takes a list of (gradient, variable) pairs for all trainable 
          variables and returns the same list type for the pairs corresponding to

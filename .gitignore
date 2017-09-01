@@ -4,12 +4,12 @@ Gatenet/.idea
 
 # Logs / outputs / etc
 logs/
+*/logs/
+datsets/
 MNIST_data/
 output/
 images/
 omni/
-old_code/logs/
-old_code/output/
 gates.txt.npy
 
 # Mac

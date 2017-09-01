@@ -8,9 +8,12 @@ def flatten_to_2d(input_tensor):
     '''Flatten the input to 2d if input is in 4d'''
     if len(input_tensor.shape) == 2:
         return input_tensor
-    N, H, W, C = input_tensor.get_shape().as_list()
-    input_tensor = tf.reshape(input_tensor, [-1, H*W*C])
-    return input_tensor
+    elif len(input_tensor.shape) == 4:
+      N, H, W, C = input_tensor.get_shape().as_list()
+      input_tensor = tf.reshape(input_tensor, [-1, H*W*C])
+      return input_tensor
+    else:
+      raise ValueError('Input Tensor should be rank 2 or 4. Shape: '+str(input_tensor.shape))
 
 def weight_variable(shape):
   """Create a weight variable with appropriate initialization."""
