@@ -268,6 +268,8 @@ class MetaOptimizer():
             rnn = self._OptimizerType(output_size=flat_helper.flattened_shape,
                                       layers=self._rnn_layers,
                                       scale=self._lr,
+                                      preprocess_name="LogAndSign",
+                                      preprocess_options={"k": 5},
                                       initializer=net_init)
             initial_hidden_state = None
         return [rnn, initial_hidden_state, flat_helper]
