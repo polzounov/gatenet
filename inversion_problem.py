@@ -63,10 +63,14 @@ def train(parameter_dict, size, total_examples, print_every):
     writer = tf.summary.FileWriter('./logs', graph=tf.get_default_graph())
     # Command to run: tensorboard --logdir=logs
 
-    history = np.zeros((parameter_dict['num_batches']/print_every, 2))
+    history = np.zeros((int(parameter_dict['num_batches']/print_every), 2))
+
 
     for i in range(parameter_dict['num_batches']):
         tr_data, tr_label = get_batch(parameter_dict['batch_size'])
+
+        if i % 30000 == 0:
+            graph.reset_graph(sess)
 
         if i % print_every == 0:
             mse_loss, pred, lr = sess.run([loss, y, learning_rate], feed_dict={x: tr_data, y_: tr_label})
