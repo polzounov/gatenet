@@ -73,7 +73,7 @@ def train(parameter_dict, size, total_examples, print_every):
             print('\nTraining {}, loss {}, lr {}'.format(i, mse_loss, lr))
             history[int(i/print_every-1),:] = [i, mse_loss]
             for j in range(min(tr_label.shape[1], 10)):
-                print('\tPred {}, Actual {}'.format(limit_len(pred[0,j]), limit_len(tr_label[0,j])))
+                print('\tPred {}, Actual {}, Input {}'.format(limit_len(pred[0,j]), limit_len(tr_label[0,j]), limit_len(tr_data[0,j])))
 
         sess.run(train_step, feed_dict={x: tr_data, y_: tr_label})
 
@@ -91,7 +91,7 @@ def main():
     'hidden_size': hidden_size*2,
     'gamma': 3.,
     'batch_size': 100,
-    'num_batches': 100000,
+    'num_batches': 30000,
     'learning_rate': 0.01,
     # 'learning_rate': 0.001,
     'output_file': 'test',
