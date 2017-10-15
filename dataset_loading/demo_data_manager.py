@@ -2,8 +2,7 @@ import numpy as np
 import time
 from PIL import Image
 import matplotlib.pyplot as plt
-from dataset_loading.data_managers import SimpleProbTransferLearnDataManager, \
-                                          MiniImagenetTransferLearnDataManager
+from dataset_loading.data_managers import SimpleProbTransferLearnDataManager
 
 '''
 def demo_transfer_miniimagenet():

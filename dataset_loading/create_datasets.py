@@ -1,6 +1,6 @@
 import numpy as np
 import os
-
+from hashlib import md5
 
 def _generate_random_weights_matrix(n_modules, n_layers, dims, random_func, seed):
     '''Generates an matrix of numpy ndarrays. Where each ndarray has shape 
@@ -103,10 +103,11 @@ class LinearProblemGenerator(object):
                  num_datasets=1, # classes = num_ds * (num_modules ^ num_layers)
                  seed=None):
         self.path = path
-        self.seed=seed
         self.dim = dim
-        self.layers, self.modules = mat_shape
         self.examples_per_class = examples_per_class
+        self.layers, self.modules = mat_shape
+        self.num_datasets = num_datasets
+        self.seed=seed
 
         self.random_mat_func = lambda shape: np.random.normal(loc=.01, size=shape)
         self.random_input_func = lambda shape: np.random.normal(loc=10., scale=10., size=shape)
@@ -211,20 +212,30 @@ class LinearProblemGenerator(object):
                 Will be shaped: (total num classes, examples per class, dim)
         '''
         # If any of args to this func are not None update the class variables
-        self.path = path or self.path 
-        self.seed = seed or self.seed
+        self.path = path or self.path
         self.dim  = dim  or self.dim
-        self.layers, self.modules = mat_shape or (self.layers, self.modules)
         self.examples_per_class = examples_per_class or self.examples_per_class
+        self.layers, self.modules = mat_shape or (self.layers, self.modules)
+        self.num_datasets = num_datasets or self.num_datasets
+        self.seed = seed or self.seed
 
         # Makes sure that different datasets have different names (don't use
         # an old dataset by accident)
-        filename = path + str(hash(str(dim) + str(examples_per_class)
-                                 + str(mat_shape) + str(num_datasets))) + '.npy'
+        var_str  = (str(dim) + str(examples_per_class) + str(mat_shape) + str(num_datasets)).encode('utf-8')
+        var_hash = md5(var_str).hexdigest()
+        filename = path + var_hash + '.npy'
 
         if os.path.isfile(filename): # If file already exists
             return np.load(filename)
         else: # Create new dataset and save it
+            print('\nCreating new dataset, with the following parameters:',
+                  '\n\tDim is               : {}'.format(self.dim),
+                  '\n\tExamples per class is: {}'.format(self.examples_per_class),
+                  '\n\tMat shape is         : {}'.format((self.layers, self.modules)),
+                  '\n\tNum dataset is       : {}'.format(self.num_datasets),
+                  '\n\nThe hash is: {}'.format(var_hash),
+                  '\n\n'
+                  )
             if seed is not None:
                 self.seed = seed
             num_layers, num_modules = mat_shape
