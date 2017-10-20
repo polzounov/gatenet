@@ -418,7 +418,7 @@ class MetaOptimizer():
 
     def minimize(self, loss_func, additional_loss_func=None):
         '''A series of updates for the optmizee network and a single step of 
-        optimization for the meta optimizer
+        optimization for the meta optimizer.
         '''
         if loss_func is None:
             raise ValueError('loss_func must not be none')
@@ -448,14 +448,20 @@ class MetaOptimizer():
         # step of optimization to the optimizer itself
         return (train_step, train_step_meta, meta_loss)
 
-    ### The following is VERY confusing to use, so we need to redesign the API
-    def meta_train_train(self, loss_func):
-        '''Does some training steps for meta-training. Runs the optimizer for
-        however many steps, and updates the optimizee variables
-        '''
-        if loss_func is None:
-            raise ValueError('loss_func must not be none')
+    def train_step(self, loss_func):
+        '''Return a tf operation which does 'len_unroll' update steps to Gatenet
+        (optimizee network). Does not update the meta optimizer's variables.
 
+        Args:
+            loss_func: (Double?) Callable loss function which returns the loss
+                       for Gatenet (optimizee) on current task's train data.
+
+        Return:
+            train_step: Tensorflow operation which updates Gatenet's variables
+                        when run.
+            meta_loss : Tensorflow node representing the loss of the meta
+                        optimizer
+        '''
         # Return the metaloss for the current task
         with tf.name_scope(self._scope+'/meta_loss'):
             meta_loss = self._meta_loss(loss_func)
@@ -466,15 +472,23 @@ class MetaOptimizer():
 
         return train_step, meta_loss
 
-    def meta_train_test(self, loss_func, additional_loss_func=None):
-        '''Does the test step for meta-training. Copys the optimizee vars, runs
-        the optimizee graph on a test set, then sees if the performance is any 
-        good. Optimize the metaoptmizer based off of the performance on the test
-        set.
-        '''
-        if loss_func is None:
-            raise ValueError('loss_func must not be none')
+    def train_step_meta(self, loss_func, additional_loss_func=None):
+        '''Return a tf operation which updates the meta optimizer's variables.
+        Does not update Gatenet's (optimizee) variables.
 
+        Args:
+            loss_func: (Double?) Callable loss function which returns the loss
+                       for Gatenet (optimizee) on current task's test data.
+            additional_loss_func: (Double?) Callable loss function which returns
+                       the loss for Gatenet (optimizee) on previous task's test
+                       data.
+
+        Return:
+            train_step_meta: Tensorflow operation which updates the meta
+                             optimizer's variables when run.
+            meta_loss      : Tensorflow node representing the loss of the meta
+                             optimizer
+        '''
         # Return the metaloss for the current task
         with tf.name_scope(self._scope+'/meta_loss'):
             meta_loss = self._meta_loss(loss_func)

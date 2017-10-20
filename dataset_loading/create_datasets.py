@@ -21,7 +21,7 @@ def _generate_random_weights_matrix(n_modules, n_layers, dims, random_func, seed
     for layer in range(n_layers):
         for module in range(n_modules):
             if seed is not None:
-                numpy.random.seed(seed)
+                np.random.seed(seed)
                 seed += 1
             weight_mat[layer][module] = random_func(dims)
     return weight_mat
@@ -41,7 +41,7 @@ def _generate_random_input(random_func, shape, seed):
         The random matrix.
     '''
     if seed is not None:
-        numpy.random.seed(seed)
+        np.random.seed(seed)
         seed += 1 # Diff matrices will be diff values
     return random_func(shape)
 
@@ -124,7 +124,7 @@ class LinearProblemGenerator(object):
                     # You can create the same dataset multiple times if the 
                     # starting seed is set the same, and the order of random
                     # matrix creation is always the same
-                    numpy.random.seed(self.seed)
+                    np.random.seed(self.seed)
                     self.seed += 1 # Diff matrices will be diff values
                 weight_mat[layer][module] = self.random_mat_func(self.dim)
         return weight_mat
@@ -134,7 +134,7 @@ class LinearProblemGenerator(object):
             # You can create the same dataset multiple times if the 
             # starting seed is set the same, and the order of random
             # matrix creation is always the same
-            numpy.random.seed(self.seed)
+            np.random.seed(self.seed)
             self.seed += 1 # Diff matrices will be diff values
         return self.random_input_func(self.examples_per_class, self.dim)
 

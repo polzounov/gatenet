@@ -241,7 +241,6 @@ class TransferLearnDataManager():
     of the labels are the size of the entire meta-dataset classes (defined as 
     transfer_classes).
 
-
     Definitions:
         * Total_classes:
                 - The total number of classes in the entire dataset. For example
@@ -265,7 +264,6 @@ class TransferLearnDataManager():
                 - Used for testing transfer performance of a network and how 
                   well the network prevents catastrophic forgetting.
                 - Used for split MNIST, split Mini-Imagenet, and other problems.
-
 
     How TransferLearnDataManager works (api):
         * Initialization:
@@ -306,11 +304,11 @@ class TransferLearnDataManager():
                  num_datasets=None):
 
         if dataset == 'mini-imagenet':
-            path = '../datasets/mini-imagenet'
+            path = 'datasets/mini-imagenet'
             self.label_type = np.int32
             self.dataset = MiniImagenet(path=path)
         elif dataset == 'simple-linear':
-            path = '../datasets/simple_linear_'
+            path = 'datasets/simple_linear_'
             self.label_type = np.float32
             self.dataset = SimpleLinearProblem(path,
                                                shape=10,
@@ -331,6 +329,7 @@ class TransferLearnDataManager():
         self.input_shape = self.dataset.input_shape
         self.label_shape = self.dataset.label_shape
         self.num_transfer_classes = num_transfer_classes
+        self.num_datasets = num_datasets
         self.data_split_task = data_split_task
 
         self.current_ds = {}
@@ -352,20 +351,22 @@ class TransferLearnDataManager():
         # Select train/test ranges
         n_train = int(len(self.current_ds_inputs) * self.data_split_task['train'])
 
-        self.current_train_inputs = self.current_ds_inputs[ind1:ind2, :n_train, :]
-        self.current_train_labels = self.current_ds_labels[ind1:ind2, :n_train, :]
-        self.current_test_inputs  = self.current_ds_inputs[ind1:ind2, n_train:, :]
-        self.current_test_labels  = self.current_ds_labels[ind1:ind2, n_train:, :]
-
-        # Flatten these into 2d (element, dim_of_input/label)
-        self.current_train_inputs = self.current_train_inputs.reshape(-1, self.input_shape)
-        self.current_train_labels = self.current_train_labels.reshape(-1, self.label_shape)
-        self.current_test_inputs  = self.current_test_inputs.reshape(-1, self.input_shape)
-        self.current_test_labels  = self.current_test_labels.reshape(-1, self.label_shape)
+        # Select inputs and labels for current task & flatten into 2d (element, dim_of_input/label)
+        self.current_train_inputs = self.current_ds_inputs[ind1:ind2, :n_train, :].reshape((-1, self.input_shape))
+        self.current_train_labels = self.current_ds_labels[ind1:ind2, :n_train, :].reshape((-1, self.label_shape))
+        self.current_test_inputs  = self.current_ds_inputs[ind1:ind2, n_train:, :].reshape((-1, self.input_shape))
+        self.current_test_labels  = self.current_ds_labels[ind1:ind2, n_train:, :].reshape((-1, self.label_shape))
 
         self.current_task += 1 # self.task_classes # Move to next task
 
     def get_train_batch(self, batch_size=16):
+        '''
+        TODO: Figure this out
+        NOTE: The way this is done now is very likely to repeat some elements
+        between training batches and miss other elements. Should I do this using
+        epochs instead? Probably? How important is this? Research this.
+        TODO: Fix?
+        '''
         if batch_size > self.current_train_inputs.shape[0]:
             raise ValueError('Batch size cannot be greater than the number of elements')
 
@@ -386,6 +387,17 @@ class TransferLearnDataManager():
         shuffled_indices = shuffled_indices[:batch_size]
         return (self.current_test_inputs[shuffled_indices, :],
                 self.current_test_labels[shuffled_indices, :])
+
+    def get_all_test_data(self):
+        '''Return the entire set of test data (for use in previous test inputs &
+        labels in training script).
+
+        Return:
+            inputs: The inputs for the current test set
+            labels: The labels for the current test set
+        '''
+        return (self.current_test_inputs,
+                self.current_test_labels)
 
 """
 class MiniImagenetTransferLearnDataManager(TransferLearnDataManager):
