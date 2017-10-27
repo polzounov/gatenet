@@ -47,11 +47,8 @@ def _train_step(sess, feed_dict=None, train_step=None, train_step_meta=None, los
                      loss=loss,
                      meta_loss=meta_loss,
                      a_loss=a_loss,
-                     merged=merged,
-                     accuracy=accuracy,
                      y=y)
     printable_vals = {
-        'accuracy' : vals.get('accuracy'),
         'meta_loss': vals.get('meta_loss'),
         'a_loss'   : vals.get('a_loss'),
         'loss'     : vals.get('loss'),
@@ -68,8 +65,11 @@ def _create_data_getter(previous_test_inputs, previous_test_labels):
         shuffled_indices = np.arange(x.shape[0])
         np.random.shuffle(shuffled_indices)
         shuffled_indices = shuffled_indices[:batch_size]
-        return (x[shuffled_indices, :],
-                y[shuffled_indices, :])
+        
+        input_dim = x.shape[-1]
+        label_dim = y.shape[-1]
+        return (x[shuffled_indices, :].reshape(-1, input_dim),
+                y[shuffled_indices, :].reshape(-1, label_dim))
 
     # Return None if there is no previous test input
     if len(previous_test_inputs) > 0:
@@ -256,14 +256,14 @@ def train(sess,
             # A callable data getter for current and additional losses
             train_dg = _dm.get_test_batch
 
-            # Callable data getters for current and previous test losses
-            test_dg = _dm.get_test_batch
-            prev_test_dg = _create_data_getter(previous_test_inputs, previous_test_labels)
-
             # Add the current task's test data to previous_test_inputs & labels
             prev_in, prev_label = _dm.get_all_test_data()
             previous_test_inputs.append(prev_in)
             previous_test_labels.append(prev_label)
+
+            # Callable data getters for current and previous test losses
+            test_dg = _dm.get_test_batch
+            prev_test_dg = _create_data_getter(previous_test_inputs, previous_test_labels)
 
             ####################################################################
             print('\t\t train - inner loop')
@@ -273,7 +273,7 @@ def train(sess,
                 if task_steps % print_every == 0:
                     vals, printable_vals = _train_step(
                             sess,
-                            feed_dict={input: tr_input, label: tr_label},
+                            feed_dict={o_input: tr_input, label: tr_label},
                             train_step=train_step,
                             loss=loss,
                             meta_loss=meta_loss_train,
@@ -296,7 +296,7 @@ def train(sess,
                 else:
                     _train_step(
                             sess,
-                            feed_dict={input: tr_input, label: tr_label},
+                            feed_dict={o_input: tr_input, label: tr_label},
                             train_step=train_step)
                     '''
                     global_steps += 1
