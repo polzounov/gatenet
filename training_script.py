@@ -152,19 +152,24 @@ class Trainer():
 
         # Meta optimization
         self.optimizer = MetaOptimizer(**MO_options)
-
         self.train_step, self.meta_loss_train = self.optimizer.train_step(
                                     loss_func=self.loss_func)
-
         self.train_step_meta, self.meta_loss_test = self.optimizer.train_step_meta(
                                     loss_func=self.loss_func,
                                     additional_loss_func=self.a_loss_func)
 
+        '''#TASKADDI
+        # TODO: Fix hacky solution (make a_loss work with no data?)
+        self.train_step_meta_no_a_loss, self.meta_loss_test_no_a_loss = self.optimizer.train_step_meta(
+                                    loss_func=self.loss_func,
+                                    additional_loss_func=self.a_loss_func,
+                                    additional_loss_scale=0.0)'''
+
         ##### Other Setup ######################################################
         if (summaries == 'all') or (summaries == 'graph'):
             self.merged = tf.summary.merge_all()
-            self.writer = tf.summary.FileWriter('./logs/simple', graph=sess.graph)
-            # Command to run: tensorboard --logdir=l2l/logs/simple
+            self.writer = tf.summary.FileWriter('./logs', graph=sess.graph)
+            # Command to run: tensorboard --logdir=logs
         else:
             self.writer = None
             self.merged = None
@@ -324,7 +329,12 @@ class Trainer():
                     y_[0][0:max_len],
                     y[0][0:max_len]))
         else:
-            raise ValueError('Input values are invalid.'
+            str1 = ''
+            if y_ is None:
+                str1 += 'Y_ is none. '
+            if x is None:
+                str1 += 'X is none. '
+            raise ValueError(str1+'Input values are invalid.'
                              + '\ndictionary is: {}'.format(kwargs))
 
 
@@ -358,7 +368,7 @@ class TransferLearnTrainer(Trainer):
             training_info    : Training options (eg. batch size,)
             optimizer_sharing: The type of sharing to use for MO
             prev_meta_opt    : (Optionally) use previously initialized MO
-            save_summaries   : Save tf summaries
+            summaries        : Save tf summaries
             loss_type        : A callable taking in prediction & label returning tf (all tf nodes)
             accuracy_func    : A callable taking in prediction & label returning accuracy (all tf nodes)
         '''
@@ -471,13 +481,23 @@ class TransferLearnTrainer(Trainer):
             test_dg = self._dm.get_test_batch
             prev_test_dg = self._create_data_getter(previous_test_inputs, previous_test_labels)
 
-            # Update the metaoptimizer
-            self._update_meta_optimizer(data_getter=test_dg, additional_data_getter=prev_test_dg)
 
+            #Added here
             # Add the current task's test data to previous_test_inputs & labels
             prev_in, prev_label = self._dm.get_all_test_data()
             previous_test_inputs.append(prev_in)
             previous_test_labels.append(prev_label)
+            #End added here
+
+
+            # Update the metaoptimizer
+            self._update_meta_optimizer(data_getter=test_dg, additional_data_getter=prev_test_dg)
+            
+            '''#TASKADDI
+            # Add the current task's test data to previous_test_inputs & labels
+            prev_in, prev_label = self._dm.get_all_test_data()
+            previous_test_inputs.append(prev_in)
+            previous_test_labels.append(prev_label)'''
 
 
     ##### Inner Loop Training ##################################################
@@ -548,6 +568,8 @@ class TransferLearnTrainer(Trainer):
         ts_input, ts_label = data_getter(self.batch_size)
 
         if additional_data_getter is not None:
+            train_step_meta = self.train_step_meta
+            meta_loss = self.meta_loss_test
             a_ts_input, a_ts_label = additional_data_getter(self.batch_size)
             a_loss = self.a_loss
             feed_dict = {
@@ -557,11 +579,14 @@ class TransferLearnTrainer(Trainer):
                     self.a_label: a_ts_label,
             }
         else:
-            a_loss = None
+            a_loss = self.a_loss #TASKADDI None
             feed_dict = {
-                    self.input: ts_input,
-                    self.label: ts_label,
+                    self.input  : ts_input,
+                    self.label  : ts_label,
+                    self.a_input: ts_input,
+                    self.a_label: ts_label,
             }
+
         vals, printable_vals = self._train_step(
                 self.sess,
                 feed_dict=feed_dict,
@@ -569,131 +594,31 @@ class TransferLearnTrainer(Trainer):
                 meta_loss=self.meta_loss_test,
                 a_loss=a_loss,
                 merged=self.merged,
-                accuracy=self.accuracy)
+                accuracy=self.accuracy,
+                y=self.pred)
         self._print_test(x=ts_input, y_=ts_label, **printable_vals)
-
-
-"""
-class MetaLearnTrainer():
-    def __init__(self,
-                 sess,
-
-                 # Options for intialization
-                 parameter_dict=None,
-                 MO_options=None,
-                 training_info=None,
-                 optimizer_sharing='m',
-                 prev_meta_opt=None,
-
-                 # For the meta_learning problem (# of classes, k-shot, etc.)
-                 meta=None,
-
-                 # Printing, graphs, etc.
-                 save_summaries=None,
-
-                 # Options for the specific problem type
-                 loss_type=lambda y_, y: tf.reduce_mean(tf.abs(y_ - y)),
-                 accuracy_func=lambda y_, y: tf.reduce_mean(tf.cast(tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1)), tf.float32)),
-                 ):
-        '''Initialize a Meta Learn Trainer object
-
-        Args: 
-            sess             : Tensorflow session.
-            parameter_dict   : Params for gatenet.
-            MO_options       : Params for the meta optimizer
-            training_info    : Training options (eg. batch size,)
-            optimizer_sharing: The type of sharing to use for MO
-            prev_meta_opt    : (Optionally) use previously initialized MO
-            save_summaries   : Save tf summaries
-            loss_type        : A callable taking in prediction & label returning tf (all tf nodes)
-            accuracy_func    : A callable taking in prediction & label returning accuracy (all tf nodes)
-        '''
-        super(MetaLearnTrainer, self).__init__(sess,
-                                               parameter_dict=parameter_dict,
-                                               MO_options=MO_options,
-                                               training_info=training_info,
-                                               optimizer_sharing=optimizer_sharing,
-                                               prev_meta_opt=prev_meta_opt,
-                                               save_summaries=save_summaries,
-                                               loss_type=loss_type,
-                                               accuracy_func=accuracy_func)
-
-    def _data_manager_init(self):
-        self.meta_build = meta['build']
-        # Instantiate MetaDataManager class
-        self.metaDataManager = MetaDataManager(**meta['init'])
-
-    def _get_placeholder_shapes():
-        # Get 1 training example
-        meta_build = self.meta_build
-        meta_build['k_shot'] = 1
-        self.metaDataManager.build_dataset(**meta_build)
-        image, label = metaDataManager.get_train_batch('train')
-
-        # Return the shapes
-        image_shape = image.shape # Assuming (w,h,c)
-        label_shape = label.shape # Assuming (l,)
-        image_shape = [None] + image_shape
-        label_shape = [None] + label_shape
-        return image_shape, label_shape
-
-    def meta_train(self, k_shot=None, **options):
-        # Optionally overwrite k_shot (but NOT num_classes)
-        meta_build = self.meta_build
-        if k_shot is not None:
-            meta_build['k_shot'] = k_shot
-
-        # Build new meta dataset
-        self.metaDataManager.build_dataset(**meta_build)
-
-        # Get batches
-        x, y_ = self.metaDataManager.get_train_batch(meta_type='train')
-        ##### C TODO: FINISH THIS LINE !!!! #####
-        ##### a_x, a_y_ = self.metaDataManager.get_train_batch(meta_type='train')
-
-        for i in range(self.training_info['num_batches']):
-            self.iteration_steps = i
-            if i % 10 = 0:
-                self._train_step(sess=self.sess,
-                                 feed_dict={self.input: x, self.label: y_, self.a_input: a_x, self.a_label: a_y_},
-                                 self.train_step,
-                                 self.train_step_meta,
-                                 self.loss,
-                                 self.meta_loss,
-                                 self.a_loss,
-                                 self.merged,
-                                 self.accuracy,
-                                 self.y)
-            else:
-                self._train_step(sess=self.sess,
-                                 feed_dict={self.input: x, self.label: y_, self.a_input: a_x, self.a_label: a_y_},
-                                 train_step,
-                                 train_step_meta)
-
-    def meta_val(self, args):
-        pass
-
-    def meta_test(self, args):
-        pass
-"""
 
 
 def main():
     # All of the default options
     shape = input_shape = output_shape = 10
-    num_datasets = 5
+    num_datasets = 4
     num_transfer_classes = 27
     examples_per_class = 50
+    print_every = 30
+    num_batches = 100
+    batch_size = 20
 
     parameter_dict = {
             'C': output_shape,
             'sublayer_type': 'AdditionSublayerModule',
-            'hidden_size': 1,
+            'hidden_size': 20,
             'gamma': 2.,
             'M': 3,
-            'L': 2,
+            'L': 3,
             'module_type': 'Perceptron',
     }
+    '''
     MO_options = {
             'optimizer_type':'CoordinateWiseLSTM',
             'second_derivatives':False,
@@ -703,14 +628,42 @@ def main():
             'w_ts':[0.33 for _ in range(3)],
             'lr':0.001,
             'meta_lr':0.01,
-            'load_from_file':None,
             'save_summaries':{},
             'name':'MetaOptimizer'
     }
+    '''
+    MO_options = {
+            'optimizer_type':'CoordinateWiseLSTM',
+            'second_derivatives':False,
+            'params_as_state':False,
+            'rnn_layers':(4,4),
+            'len_unroll':3,
+            'w_ts':[0.33 for _ in range(3)],
+            'lr':0.001,
+            'meta_lr':0.01,
+            'load_from_file':[
+                    './save/meta_opt_identity_initialization', # 0
+                    './save/meta_opt_identity_initialization', # 1
+                    './save/meta_opt_identity_initialization', # 2
+                    './save/meta_opt_identity_initialization', # 3
+                    './save/meta_opt_identity_initialization', # 4
+                    './save/meta_opt_identity_initialization', # 5
+                    './save/meta_opt_identity_initialization', # 6
+                    './save/meta_opt_identity_initialization', # 7
+                    './save/meta_opt_identity_initialization', # 8
+                    './save/meta_opt_identity_initialization', # 9
+                    './save/meta_opt_identity_initialization', # 10
+                    './save/meta_opt_identity_initialization', # 11
+                    './save/meta_opt_identity_initialization', # 12
+            ],
+            'save_summaries':{},
+            'name':'MetaOptimizer'
+    }
+    #'''
     training_info = {
-            'batch_size':20,
-            'num_batches':100,
-            'print_every':10,
+            'batch_size':batch_size,
+            'num_batches':num_batches,
+            'print_every':print_every,
             'num_datasets':num_datasets, # Number of times to get a new dataset
             'classes_per_dataset':num_transfer_classes, # Classes per dataset
             'tasks_per_dataset':num_transfer_classes, # Tasks per dataset
@@ -736,7 +689,7 @@ def main():
             'dataset':'simple-linear',
             'num_transfer_classes':num_transfer_classes,
             'task_classes':1,
-            'data_split_meta':{'train':0.64, 'val': 0.16, 'test':0.20},
+            'data_split_meta':{'train':0.75, 'val': 0.0, 'test':0.25},
             'data_split_task':{'train': 0.7, 'test': 0.3},
             'examples_per_class':examples_per_class, ## B TODO: this number is a hyper param ##
             'num_datasets':num_datasets

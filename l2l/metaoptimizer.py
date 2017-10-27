@@ -472,7 +472,7 @@ class MetaOptimizer():
 
         return train_step, meta_loss
 
-    def train_step_meta(self, loss_func, additional_loss_func=None):
+    def train_step_meta(self, loss_func, additional_loss_func=None, additional_loss_scale=None):
         '''Return a tf operation which updates the meta optimizer's variables.
         Does not update Gatenet's (optimizee) variables.
 
@@ -489,13 +489,14 @@ class MetaOptimizer():
             meta_loss      : Tensorflow node representing the loss of the meta
                              optimizer
         '''
+        a_loss_scale = additional_loss_scale or self._additional_loss_scale
         # Return the metaloss for the current task
         with tf.name_scope(self._scope+'/meta_loss'):
             meta_loss = self._meta_loss(loss_func)
 
         # Optional: Return metaloss for the additional loss
         if additional_loss_func is not None:
-            meta_loss += self._additional_loss_scale * self._meta_loss(additional_loss_func, update_vars=False)
+            meta_loss += a_loss_scale * self._meta_loss(additional_loss_func, update_vars=False)
 
         # Get all trainable variables from the meta_optimizer itself
         # For scoping the variables to train with a step of ADAM (make sure
