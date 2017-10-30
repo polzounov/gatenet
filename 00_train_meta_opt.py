@@ -65,7 +65,7 @@ def _create_data_getter(previous_test_inputs, previous_test_labels):
         shuffled_indices = np.arange(x.shape[0])
         np.random.shuffle(shuffled_indices)
         shuffled_indices = shuffled_indices[:batch_size]
-        
+
         input_dim = x.shape[-1]
         label_dim = y.shape[-1]
         return (x[shuffled_indices, :].reshape(-1, input_dim),
@@ -182,6 +182,7 @@ def train(sess,
     ##### Misc Vars ########################################################
     sess = sess
     num_datasets = training_info['num_datasets']
+    num_training_datasets = int(num_datasets * transfer_options['data_split_meta']['train'])
     print_every = training_info['print_every']
     num_batches = training_info['num_batches']
     batch_size = training_info['batch_size']
@@ -234,7 +235,7 @@ def train(sess,
     # Initialize Variables
     tf.global_variables_initializer().run()
 
-    for ds_iter in range(num_datasets):
+    for ds_iter in range(num_training_datasets):
         current_dataset = ds_iter  # Set ds iteration (for loss history)
         # Reset gatenet (optimizee network)
         graph.reset_graph(sess)
@@ -250,6 +251,7 @@ def train(sess,
         num_tasks = training_info['tasks_per_dataset']
 
         for task_iter in range(num_tasks):
+            print('The current task iteration is: {}'.format(task_iter))
             current_task = task_iter  # Set the current task (for loss history)
             _dm.build_task()
 
@@ -268,6 +270,7 @@ def train(sess,
             ####################################################################
             print('\t\t train - inner loop')
             for i in range(num_batches):
+                task_steps = i
                 tr_input, tr_label = train_dg(batch_size)
 
                 if task_steps % print_every == 0:
@@ -278,8 +281,13 @@ def train(sess,
                             loss=loss,
                             meta_loss=meta_loss_train,
                             y=pred)
-                    _print_progress(x=tr_input, y_=tr_label, **printable_vals)
-
+                    _print_progress(current_task=current_task,
+                                    task_steps=task_steps,
+                                    global_steps=global_steps,
+                                    current_dataset=current_dataset,
+                                    x=tr_input,
+                                    y_=tr_label,
+                                    **printable_vals)
                     '''
                     # Update training history
                     loss_history.append((
@@ -289,19 +297,13 @@ def train(sess,
                             vals.get('loss'),
                             vals.get('meta_loss'),
                         ))
-                    global_steps += 1
-                    task_steps += 1
                     '''
-
                 else:
                     _train_step(
                             sess,
                             feed_dict={o_input: tr_input, label: tr_label},
                             train_step=train_step)
-                    '''
-                    global_steps += 1
-                    task_steps += 1
-                    '''
+                global_steps += 1
 
             ####################################################################
             print('\t\t test - inner loop')
@@ -320,7 +322,12 @@ def train(sess,
                     meta_loss=meta_loss_test,
                     a_loss=a_loss,
                     y=pred)
-            _print_test(x=ts_input, y_=ts_label, **printable_vals)
+            _print_test(current_task=current_task,
+                        task_steps=task_steps,
+                        global_steps=global_steps,
+                        x=ts_input,
+                        y_=ts_label,
+                        **printable_vals)
 
 
 def main():
