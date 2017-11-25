@@ -5,7 +5,6 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from dataset_loading.datasets import *
 
-
 """
 # general class to handle dataset operations
 class DataManager:
@@ -138,7 +137,7 @@ class MetaDataManager(DataManager):
             self.val_dataset_train_classes, self.val_dataset_test_images, \
             self.val_dataset_test_labels, self.val_dataset_test_classes = \
             self._build_dataset_helper(self.classes_val, num_dataset_classes=n, k_shot=k, dataset_num_test=d)
-        
+
         if len(self.classes_ts) > 0:
             # Build meta testing dataset
             self.ts_dataset_train_images, self.ts_dataset_train_labels, \
@@ -236,11 +235,10 @@ class MetaDataManager(DataManager):
 # Specific class to handle transfer learning problems
 class TransferLearnDataManager():
     """TransferLearnDataManager works in a similar way to MetaDataManager but
-    instead of creating meta-datasets with the labels being the size of the 
+    instead of creating meta-datasets with the labels being the size of the
     number of classes currently begin trained (eg num_dataset_classes), the size
-    of the labels are the size of the entire meta-dataset classes (defined as 
+    of the labels are the size of the entire meta-dataset classes (defined as
     transfer_classes).
-
 
     Definitions:
         * Total_classes:
@@ -248,24 +246,23 @@ class TransferLearnDataManager():
                   100 classes in Mini-Imagenet.
 
         * Transfer_train/val/testing_dataset (or t_tvt_dataset):
-                - The datasets which contain all of the classes for a specific 
-                  dataset type. 
+                - The datasets which contain all of the classes for a specific
+                  dataset type.
                 - For example 64 classes in the Mini-Imagenet Training dataset.
 
         * Current_transfer_dataset (or current_meta_dataset):
-                - A subset of one of transfer_train/val/testing_datasets. 
+                - A subset of one of transfer_train/val/testing_datasets.
                 - To create: randomly sample classes from one of the tvt_datasets.
-                - The total number of classes must be smaller than the total 
+                - The total number of classes must be smaller than the total
                   number of classes in EACH of the tvt_datasets.
                 - This is also the output size of the learner (optimizee) network.
 
         * Current_task_dataset (aka current_task or current_problem):
                 - Takes a subset of current_transfer_dataset with a small number
                   of classes (usually 2).
-                - Used for testing transfer performance of a network and how 
+                - Used for testing transfer performance of a network and how
                   well the network prevents catastrophic forgetting.
                 - Used for split MNIST, split Mini-Imagenet, and other problems.
-
 
     How TransferLearnDataManager works (api):
         * Initialization:
@@ -283,16 +280,16 @@ class TransferLearnDataManager():
                   tasks (unlike meta-learning).
 
         * Get_current_task:
-                - From the current task dataset, sample a small number (usually 
+                - From the current task dataset, sample a small number (usually
                   2) of classes to get the current problem to solve/train on.
-                - The shape of the label should be the same as the number of 
-                  classes in current_transfer_dataset. 
-                    + This differs from meta-learning, where the shape of the 
+                - The shape of the label should be the same as the number of
+                  classes in current_transfer_dataset.
+                    + This differs from meta-learning, where the shape of the
                       label would be the small number of classes currently being
                       trained (for split MNIST it would be 2).
 
         * Get train/val/test batch:
-                - Get the training batch for the current task (eg 2 classes 
+                - Get the training batch for the current task (eg 2 classes
                   training examples).
     """
 
@@ -306,31 +303,32 @@ class TransferLearnDataManager():
                  num_datasets=None):
 
         if dataset == 'mini-imagenet':
-            path = '../datasets/mini-imagenet'
+            path = 'datasets/mini-imagenet'
             self.label_type = np.int32
             self.dataset = MiniImagenet(path=path)
         elif dataset == 'simple-linear':
-            path = '../datasets/simple_linear_'
+            path = 'datasets/simple_linear_'
             self.label_type = np.float32
             self.dataset = SimpleLinearProblem(path,
                                                shape=10,
                                                examples_per_class=examples_per_class,
-                                               weights_mat_shapes=(3,3),
+                                               weights_mat_shapes=(3, 3),
                                                data_split_meta=data_split_meta,
                                                num_datasets=num_datasets)
         # get information about dataset
         self.meta_train_images = self.dataset.train_images
         self.meta_train_labels = self.dataset.train_labels
-        self.meta_val_images   = self.dataset.val_images
-        self.meta_val_labels   = self.dataset.val_labels
-        self.meta_test_images  = self.dataset.test_images
-        self.meta_test_labels  = self.dataset.test_labels
+        self.meta_val_images = self.dataset.val_images
+        self.meta_val_labels = self.dataset.val_labels
+        self.meta_test_images = self.dataset.test_images
+        self.meta_test_labels = self.dataset.test_labels
 
         self.task_classes = task_classes
         self.examples_per_class = examples_per_class
         self.input_shape = self.dataset.input_shape
         self.label_shape = self.dataset.label_shape
         self.num_transfer_classes = num_transfer_classes
+        self.num_datasets = num_datasets
         self.data_split_task = data_split_task
 
         self.current_ds = {}
@@ -349,25 +347,36 @@ class TransferLearnDataManager():
         # Select task range
         ind1 = self.task_list[self.current_task] * self.task_classes
         ind2 = ind1 + self.task_classes
+        if ind2 < len(self.task_list):
+            task_indices = np.arange(ind1, ind2)
+        else:
+            ind2 = ind2 % len(self.task_list)
+            task_indices = np.concatenate((np.arange(ind1, len(self.task_list)), np.arange(0, ind2)))
+
         # Select train/test ranges
         n_train = int(len(self.current_ds_inputs) * self.data_split_task['train'])
 
-        self.current_train_inputs = self.current_ds_inputs[ind1:ind2, :n_train, :]
-        self.current_train_labels = self.current_ds_labels[ind1:ind2, :n_train, :]
-        self.current_test_inputs  = self.current_ds_inputs[ind1:ind2, n_train:, :]
-        self.current_test_labels  = self.current_ds_labels[ind1:ind2, n_train:, :]
+        # Select inputs and labels for current task & flatten into 2d (element, dim_of_input/label)
+        self.current_train_inputs = self.current_ds_inputs[task_indices, :n_train, :].reshape((-1, self.input_shape))
+        self.current_train_labels = self.current_ds_labels[task_indices, :n_train, :].reshape((-1, self.label_shape))
+        self.current_test_inputs = self.current_ds_inputs[task_indices, n_train:, :].reshape((-1, self.input_shape))
+        self.current_test_labels = self.current_ds_labels[task_indices, n_train:, :].reshape((-1, self.label_shape))
 
-        # Flatten these into 2d (element, dim_of_input/label)
-        self.current_train_inputs = self.current_train_inputs.reshape(-1, self.input_shape)
-        self.current_train_labels = self.current_train_labels.reshape(-1, self.label_shape)
-        self.current_test_inputs  = self.current_test_inputs.reshape(-1, self.input_shape)
-        self.current_test_labels  = self.current_test_labels.reshape(-1, self.label_shape)
-
-        self.current_task += 1 # self.task_classes # Move to next task
+        self.current_task += 1  # self.task_classes # Move to next task
 
     def get_train_batch(self, batch_size=16):
+        '''
+        TODO: Figure this out
+        NOTE: The way this is done now is very likely to repeat some elements
+        between training batches and miss other elements. Should I do this using
+        epochs instead? Probably? How important is this? Research this.
+        TODO: Fix?
+        '''
         if batch_size > self.current_train_inputs.shape[0]:
-            raise ValueError('Batch size cannot be greater than the number of elements')
+            raise ValueError('Batch size cannot be greater than the number of elements'
+                             + '\nBatch size is:{}'.format(batch_size)
+                             + '\nNumber of elements (self.current_train_inputs.shape[0]) is: {}'.format(
+                             self.current_train_inputs.shape[0]))
 
         # Get batch_size random examples (with replacement)
         shuffled_indices = np.arange(self.current_train_inputs.shape[0])
@@ -375,10 +384,13 @@ class TransferLearnDataManager():
         shuffled_indices = shuffled_indices[:batch_size]
         return (self.current_train_inputs[shuffled_indices, :],
                 self.current_train_labels[shuffled_indices, :])
-    
+
     def get_test_batch(self, batch_size=16):
         if batch_size > self.current_test_inputs.shape[0]:
-            raise ValueError('Batch size cannot be greater than the number of elements')
+            raise ValueError('Batch size cannot be greater than the number of elements'
+                             + '\nBatch size is:{}'.format(batch_size)
+                             + '\nNumber of elements (self.current_test_inputs.shape[0]) is: {}'.format(
+                             self.current_test_inputs.shape[0]))
 
         # Get batch_size random examples (with replacement)
         shuffled_indices = np.arange(self.current_test_inputs.shape[0])
@@ -386,6 +398,18 @@ class TransferLearnDataManager():
         shuffled_indices = shuffled_indices[:batch_size]
         return (self.current_test_inputs[shuffled_indices, :],
                 self.current_test_labels[shuffled_indices, :])
+
+    def get_all_test_data(self):
+        '''Return the entire set of test data (for use in previous test inputs &
+        labels in training script).
+
+        Return:
+            inputs: The inputs for the current test set
+            labels: The labels for the current test set
+        '''
+        return (self.current_test_inputs,
+                self.current_test_labels)
+
 
 """
 class MiniImagenetTransferLearnDataManager(TransferLearnDataManager):
@@ -466,6 +490,7 @@ class MiniImagenetTransferLearnDataManager(TransferLearnDataManager):
         np.random.shuffle(self.task_list) # Randomize the order of task training
 """
 
+
 # Does the same thing as TransferLearnDataManager but builds transfer classes
 # in order (to make sure we use as much tranfer as possible in the simple
 # problem)
@@ -474,23 +499,23 @@ class SimpleProbTransferLearnDataManager(TransferLearnDataManager):
                  dataset='simple-linear',
                  num_transfer_classes=27,
                  task_classes=1,
-                 data_split_meta={'train':0.64, 'val': 0.16, 'test':0.20},
+                 data_split_meta={'train': 0.64, 'val': 0.16, 'test': 0.20},
                  data_split_task={'train': 0.7, 'test': 0.3},
                  examples_per_class=1000,
                  num_datasets=100):
         super(SimpleProbTransferLearnDataManager, self).__init__(
-                                    dataset=dataset,
-                                    num_transfer_classes=num_transfer_classes,
-                                    task_classes=task_classes,
-                                    data_split_meta=data_split_meta,
-                                    data_split_task=data_split_task,
-                                    examples_per_class= examples_per_class,
-                                    num_datasets=num_datasets)
+            dataset=dataset,
+            num_transfer_classes=num_transfer_classes,
+            task_classes=task_classes,
+            data_split_meta=data_split_meta,
+            data_split_task=data_split_task,
+            examples_per_class=examples_per_class,
+            num_datasets=num_datasets)
         self.built_datasets = 0
 
     def build_dataset(self, transfer_type):
         '''Build the 'Current_transfer_dataset' with both inputs and labels
-        Args: 
+        Args:
             transfer_type: Transfer dataset to use (tranfer train/val/test)
         Updates values of:
             self.current_train_inputs
@@ -498,12 +523,12 @@ class SimpleProbTransferLearnDataManager(TransferLearnDataManager):
             self.current_train_labels
             self.current_test_labels
 
-        All of these set values are rank 3 tensors. 
+        All of these set values are rank 3 tensors.
             Dim 1 is: The class of the element
             Dim 2 is: The example inside the class
             Dim 3 is: Elements inside the input/label
 
-        For example, to select training example j from class i: 
+        For example, to select training example j from class i:
             self.current_train_inputs[i,j,:] # shape is the dimension of the input
         Or to select training label j from class i:
             self.current_train_labels[i,j,:] # shape is the dimension of the label
@@ -522,7 +547,7 @@ class SimpleProbTransferLearnDataManager(TransferLearnDataManager):
 
         # Select classes in order
         bd, ntc = self.built_datasets, self.num_transfer_classes
-        indices = np.arange(bd*ntc, (bd+1)*ntc)
+        indices = np.arange(bd * ntc, (bd + 1) * ntc)
         self.built_datasets += 1
 
         self.current_ds_inputs = images[indices].copy()
@@ -530,5 +555,6 @@ class SimpleProbTransferLearnDataManager(TransferLearnDataManager):
 
         self.current_task = 0
         self.task_list = np.arange(self.num_transfer_classes)
-        np.random.shuffle(self.task_list) # Randomize the order of task training
+        print(self.task_list)
+        np.random.shuffle(self.task_list)  # Randomize the order of task training
 

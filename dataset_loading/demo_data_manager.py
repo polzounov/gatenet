@@ -6,7 +6,7 @@ from dataset_loading.data_managers import SimpleProbTransferLearnDataManager
 
 '''
 def demo_transfer_miniimagenet():
-    shape = ???
+    shape = (100,100) # This is not a fixed size so this need to be selected in datasets 
     task_classes = 2
     batch_size = 5
     sp = MiniImagenetTransferLearnDataManager(dataset='simple-linear',

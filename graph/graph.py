@@ -122,7 +122,6 @@ class Graph():
             '\ngraph_structure', graph_structure)
       raise ValueError('The given graph definition is unsupported')
 
-
   def reset_graph(self, sess):
     #### TODO: Add string parsing on var.name to only re-initialize gatenet weights, not MO weights
     tvars = tf.trainable_variables()
