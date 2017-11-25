@@ -17,14 +17,14 @@ from l2l.training import training_setup, training
 def simple_problem(batch_size, problem='mult'):
     x = np.random.rand(batch_size, 1) * 10
     if problem == 'mult' or problem == 'multiply':
-        y = x * 2
+        y = x * 5
         x = np.concatenate((x, np.ones_like(x)), axis=1)
     elif problem == 'square':
         y = np.multiply(x, x)
-        x = np.concatenate((x, np.zeros_like(x)), axis=1)
+        x = np.concatenate((x, -1*np.ones_like(x)), axis=1)
     elif problem == 'sqrt':
         y = np.sqrt(x)
-        x = np.concatenate((x, -1*np.ones_like(x)), axis=1)
+        x = np.concatenate((x, np.zeros_like(x)), axis=1)
     else:
         raise ValueError('Invalid problem type: {}'.format(problem))
     return (x, y)
@@ -64,10 +64,10 @@ def train(parameter_dict, MO_options, training_info):
                  data_getter_additional=random_data_getter(['mult']),
                  **packed_vars)
 
-        # List of problems
-        problems = ['sqrt', 'mult', 'square']
+        '''# List of problems
+        problems = ['mult', 'square', 'sqrt']
 
-        # Run a rounf of training with a random problem
+        # Run a round of training with a random problem
         for i in range(500):
             # Select problem to use
             current_p = np.random.randint(0, len(problems))
@@ -75,9 +75,20 @@ def train(parameter_dict, MO_options, training_info):
             a_probs = [p for j, p in enumerate(problems) if j != current_p]
 
             # Run training
-            print('\n\n\nNext problem: ', current_p, '\n')
+            print('\n\n\nIteration: {}. Next problem: {}.'.format(i, prob))
             training(data_getter=data_getter(prob),
                      data_getter_additional=random_data_getter(a_probs),
+                     **packed_vars)'''
+                # List of problems
+
+        for i in range(200):
+            print('\n\n\nIteration: {}. Next problem: {}.'.format(i*2, 'square'))
+            training(data_getter=data_getter('square'),
+                     data_getter_additional=data_getter('mult'),
+                     **packed_vars)
+            print('\n\n\nIteration: {}. Next problem: {}.'.format(i*2+1, 'mult'))
+            training(data_getter=data_getter('mult'),
+                     data_getter_additional=data_getter('square'),
                      **packed_vars)
 
 
@@ -104,7 +115,7 @@ if __name__ == "__main__":
     }
     training_info = {
         'batch_size': 16,
-        'num_batches': 200,
+        'num_batches': 100,
         'print_every': 10
     }
 

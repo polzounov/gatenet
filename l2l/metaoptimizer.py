@@ -102,7 +102,7 @@ class MetaOptimizer():
         self._save_summaries = save_summaries
         self._additional_loss_scale = additional_loss_scale
 
-        # Use wt_s as list or use lambda function to calulcate the w_ts
+        # Use wt_s as list or use lambda function to calculate the w_ts
         if w_ts is None:
             # Default in paper
             self._w_ts = [1 for _ in range(self._len_unroll)]
@@ -127,6 +127,8 @@ class MetaOptimizer():
                     self._create_fakes(self._optimizee_vars)
 
             self._optimizers = []
+
+            load_from_file = self._order_file_list(load_from_file)
             for i, scope in enumerate(shared_scopes):
                 # Make sure scope doesn't contain vars from the meta-opt
                 self._verify_scope(scope)
@@ -141,16 +143,35 @@ class MetaOptimizer():
                 optimizer = self._init_optimizer({}, scope, name='optimizer'+str(i), load_from_file=lff)
                 self._optimizers.append(optimizer)
 
-    def save(self, sess, path='save/meta_opt_network'):
+    ##### SAVING & LOADING #####################################################
+    def save(self, sess, path='./save/meta_opt_network'):
         '''Save meta-optimizer.'''
-        result = {}
+        results = {}
         k = 0
-        for i, net in enumerate(self._optimizers):
+        for i, optimizer in enumerate(self._optimizers):
+            net = optimizer[0]
             filename = path + '_' + str(i) + '.l2l'
-            net_vars = networks.save(net[i], sess, filename=filename)
-            result[filename] = net_vars
+            net_vars = networks.save(net, sess, filename=filename)
+            results[filename] = net_vars
 
-        return result
+        return results
+
+    @staticmethod
+    def _order_file_list(filenames):
+        '''If the metaoptimizer is saved using the saving function, then the 
+        optimizers (if several) are saved in the exact same order they are 
+        created. So if we give only a list of (numbered) filenames, we can 
+        recreate the exact same metaoptimizer by sorting the filename list.
+        '''
+        if filenames is None:  # If there are no files/optimizers to load
+            return filenames
+        elif isinstance(filenames, str):  # If there is only one file/optimizer
+            return filenames
+        else:
+            # Sort the filenames by the last number before the '.'
+            # Of form: prependedname_1_.l2l
+            fns_sorted = sorted(filenames, key=lambda n: int(n.split('.')[-2].split('_')[-1]))
+            return fns_sorted
 
     ##### WEIRD HACKS & STUFF ##################################################
     def _create_fakes(self, prev_vars):
@@ -247,9 +268,11 @@ class MetaOptimizer():
             rnn = self._OptimizerType(output_size=flat_helper.flattened_shape,
                                       layers=self._rnn_layers,
                                       scale=self._lr,
+                                      preprocess_name="LogAndSign",
+                                      preprocess_options={"k": 5},
                                       initializer=net_init)
-            intitial_hidden_state = None
-        return [rnn, intitial_hidden_state, flat_helper]
+            initial_hidden_state = None
+        return [rnn, initial_hidden_state, flat_helper]
 
     def _meta_loss_no_update(self, loss_func):
         '''An additional loss to the meta optimizer, that allows you to train 
@@ -332,8 +355,6 @@ class MetaOptimizer():
                     matching_grads.append(grad)
         return matching_grads
 
-    ###### This one call tf.gradients several times (since it's a static graph 
-    # it doesn't actually recalculate grads multiple times but combines them?)
     def _update_calc(self, fx, x, x_var_dict):
         '''Single step of the meta optimizer to calculate the delta updates for
         the params of the optimizee network
@@ -342,7 +363,6 @@ class MetaOptimizer():
         x is all of the variables that need to be optimized (for all optimizers)
         x_var_dict: keys are real var names, vals are fake vars
         '''
-        # Gradients for ONLY the current RNNs vars
         gradients = tf.gradients(fx, x)
 
         # Things like BatchNorm, etc. don't support second-derivatives so we 
@@ -398,7 +418,7 @@ class MetaOptimizer():
 
     def minimize(self, loss_func, additional_loss_func=None):
         '''A series of updates for the optmizee network and a single step of 
-        optimization for the meta optimizer
+        optimization for the meta optimizer.
         '''
         if loss_func is None:
             raise ValueError('loss_func must not be none')
@@ -428,3 +448,65 @@ class MetaOptimizer():
         # step of optimization to the optimizer itself
         return (train_step, train_step_meta, meta_loss)
 
+    def train_step(self, loss_func):
+        '''Return a tf operation which does 'len_unroll' update steps to Gatenet
+        (optimizee network). Does not update the meta optimizer's variables.
+
+        Args:
+            loss_func: (Double?) Callable loss function which returns the loss
+                       for Gatenet (optimizee) on current task's train data.
+
+        Return:
+            train_step: Tensorflow operation which updates Gatenet's variables
+                        when run.
+            meta_loss : Tensorflow node representing the loss of the meta
+                        optimizer
+        '''
+        # Return the metaloss for the current task
+        with tf.name_scope(self._scope+'/meta_loss'):
+            meta_loss = self._meta_loss(loss_func)
+
+        # Update the original variables with the updates to the fake ones
+        with tf.name_scope(self._scope+'/update_real_vars'):
+            train_step = self._real_update_step()
+
+        return train_step, meta_loss
+
+    def train_step_meta(self, loss_func, additional_loss_func=None, additional_loss_scale=None):
+        '''Return a tf operation which updates the meta optimizer's variables.
+        Does not update Gatenet's (optimizee) variables.
+
+        Args:
+            loss_func: (Double?) Callable loss function which returns the loss
+                       for Gatenet (optimizee) on current task's test data.
+            additional_loss_func: (Double?) Callable loss function which returns
+                       the loss for Gatenet (optimizee) on previous task's test
+                       data.
+
+        Return:
+            train_step_meta: Tensorflow operation which updates the meta
+                             optimizer's variables when run.
+            meta_loss      : Tensorflow node representing the loss of the meta
+                             optimizer
+        '''
+        a_loss_scale = additional_loss_scale or self._additional_loss_scale
+        # Return the metaloss for the current task
+        with tf.name_scope(self._scope+'/meta_loss'):
+            meta_loss = self._meta_loss(loss_func)
+
+        # Optional: Return metaloss for the additional loss
+        if additional_loss_func is not None:
+            meta_loss += a_loss_scale * self._meta_loss(additional_loss_func, update_vars=False)
+
+        # Get all trainable variables from the meta_optimizer itself
+        # For scoping the variables to train with a step of ADAM (make sure
+        # that you only update optimizer vars and not optimizee vars)
+        meta_optimizer_vars = self._get_vars_in_scope(scope=self._scope)
+
+        # Update step of adam to (only) the meta optimizer's variables
+        optimizer = tf.train.AdamOptimizer(self._meta_lr)
+        train_step_meta = optimizer.minimize(meta_loss, var_list=meta_optimizer_vars)
+
+        # This is actually multiple steps of update to the optimizee and one 
+        # step of optimization to the optimizer itself
+        return train_step_meta, meta_loss

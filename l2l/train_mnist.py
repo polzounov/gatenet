@@ -47,10 +47,25 @@ def train(parameter_dict):
                     loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
 
                     # Add regularization to the weights in init_graph
+                    '''
                     weights_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='init_graph')
-                    reg = tf.contrib.layers.l2_regularizer(100000000.)
+                    reg = tf.contrib.layers.l2_regularizer(1.)
                     loss += tf.contrib.layers.apply_regularization(reg, weights_list=weights_list)
+                    '''
+                    return loss
 
+        def loss_func(x=x, y_=y_, fx=graph.return_logits, mock_func=None, var_dict=None):
+            def build():
+                y = fx(x)  # , custom_getter=custom_getter)
+                with tf.name_scope('loss'):
+                    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
+
+                    # Add regularization to the weights in init_graph
+                    '''
+                    weights_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='init_graph')
+                    reg = tf.contrib.layers.l2_regularizer(1.)
+                    loss += tf.contrib.layers.apply_regularization(reg, weights_list=weights_list)
+                    '''
                     return loss
 
             # Run through the mock func (w fake vars)

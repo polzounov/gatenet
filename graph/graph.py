@@ -122,6 +122,12 @@ class Graph():
             '\ngraph_structure', graph_structure)
       raise ValueError('The given graph definition is unsupported')
 
+  def reset_graph(self, sess):
+    #### TODO: Add string parsing on var.name to only re-initialize gatenet weights, not MO weights
+    tvars = tf.trainable_variables()
+    for var in tvars:
+      sess.run(tf.variables_initializer(var_list=[var]))
+
   def return_logits(self, input_images):
     with tf.name_scope('run_graph'):
       '''Return the output of graph based off of input_images'''

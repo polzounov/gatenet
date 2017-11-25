@@ -126,11 +126,14 @@ def training_setup(sess,
     # Meta optimization
     optimizer = MetaOptimizer(shared_scopes=shared_scopes, **MO_options)
     if additional_train:
-        train_step, train_step_meta, meta_loss = optimizer.minimize(
-                                loss_func=loss_func,
-                                additional_loss_func=additional_loss_func)
+        train_step, meta_loss = optimizer.train_step(
+                                    loss_func=loss_func)
+        train_step_meta, _ = optimizer.train_step_meta(
+                                    loss_func=loss_func,
+                                    additional_loss_func=additional_loss_func)
     else:
-        train_step, train_step_meta, meta_loss = optimizer.minimize(loss_func)
+        train_step, meta_loss = optimizer.train_step(loss_func=loss_func)
+        train_step_meta, _ = optimizer.train_step_meta(loss_func=loss_func)
 
     ########## Other Setup #####################################################
     if (summaries == 'all') or (summaries == 'graph'):
@@ -163,6 +166,7 @@ def training_setup(sess,
         'train_step_meta': train_step_meta,
         'loss': loss,
         'meta_loss': meta_loss,
+        'optimizer': optimizer,
     }
     if additional_train:
         packed_vars['a_x'] = a_x
@@ -175,6 +179,7 @@ def training_setup(sess,
 
 def training(additional_train=None,
              save_optimizer=None,
+             optimizer=None, # For saving the meta opt vars
              sess=None,
              x=None,
              y_=None,
@@ -235,9 +240,9 @@ def training(additional_train=None,
 
     if save_optimizer:
         # Save the parameters of the metaoptimizer
-        results = optimizer.save(sess, path='save/meta_opt_a')
+        results = optimizer.save(sess, path='./save/meta_opt_a')
         filenames = list(results.keys())
-        list(print(filenames))
+        print(filenames)
         return filenames
 
 

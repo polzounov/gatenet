@@ -6,6 +6,7 @@ Gatenet/.idea
 logs/
 */logs/
 datsets/
+*/save
 MNIST_data/
 output/
 images/

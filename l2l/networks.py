@@ -49,15 +49,30 @@ def save(network, sess, filename=None):
   to_save = collections.defaultdict(dict)
   variables = snt.get_variables_in_module(network)
 
+  # Debugging
+  string_dump = ''
+  # END Debugging
+
   for v in variables:
     split = v.name.split(":")[0].split("/")
     module_name = split[-2]
     variable_name = split[-1]
     to_save[module_name][variable_name] = v.eval(sess)
 
+    # Debugging
+    string_dump += 'Module name: {}, Var name: {}, Shape: {}\n'.format(
+        module_name, variable_name, str(v.shape))
+    string_dump += str(np.array(to_save[module_name][variable_name]))+'\n\n'
+    # END Debugging
+
   if filename:
     with open(filename, "wb") as f:
       pickle.dump(to_save, f)
+
+    # Debugging
+    with open(filename+'_str_dump', "w") as f:
+      f.write(string_dump)
+    # END Debugging
 
   return to_save
 
