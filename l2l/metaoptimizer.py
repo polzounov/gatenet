@@ -294,7 +294,7 @@ class MetaOptimizer():
             deltas = self._update_calc(prev_loss, fake_vars, fake_var_dict)
 
             # Run an update step to the real and fake variables & update the fake var dict
-            fake_var_dict, fake_vars =  self._update_step(deltas, fake_var_dict)
+            fake_var_dict, fake_vars = self._update_step(deltas, fake_var_dict)
             meta_loss = loss_func(mock_func=_wrap_variable_creation, 
                                   var_dict=fake_var_dict)
 
@@ -464,7 +464,7 @@ class MetaOptimizer():
         '''
         # Return the metaloss for the current task
         with tf.name_scope(self._scope+'/meta_loss'):
-            meta_loss = self._meta_loss(loss_func)
+            meta_loss = #self._meta_loss_no_update(loss_func)
 
         # Update the original variables with the updates to the fake ones
         with tf.name_scope(self._scope+'/update_real_vars'):

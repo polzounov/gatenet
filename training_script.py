@@ -149,7 +149,7 @@ class Trainer():
 
         ##### Meta Optimizer Setup #############################################
         # Get the previous meta optimizer's variables
-        #MO_options['load_from_file'] = MO_options['load_from_file'] or prev_meta_opt
+        MO_options['load_from_file'] = MO_options['load_from_file'] or prev_meta_opt
 
         # Get module wise variable sharing for the meta optimizer
         MO_options['shared_scopes'] = self.graph.scopes(scope_type=optimizer_sharing)
@@ -180,7 +180,7 @@ class Trainer():
         # Initialize Variables
         tf.global_variables_initializer().run()
 
-        self.optimizer.save(self.sess)
+        # self.optimizer.save(self.sess)
 
     def _data_manager_init(self):
         raise NotImplementedError()
@@ -406,7 +406,7 @@ class TransferLearnTrainer(Trainer):
         # Initialize the datamanager
         self._dm = SimpleProbTransferLearnDataManager(**self.transfer_options)
 
-    def _get_placeholder_shapes(self):  ## B TODO: remove hardcoding ##################
+    def _get_placeholder_shapes(self):  ## B TODO: remove hardcoding ###########
         # NOTE: Right now this is hardcoded for the simple problem!
         return (None, 10), (None, 10)  # (batch_size, in/output dim)
 
@@ -436,10 +436,44 @@ class TransferLearnTrainer(Trainer):
             self._transfer_train_loop()
 
     def meta_val(self):
-        raise NotImplementedError()
+        '''Validate the meta optimizer for the transfer learning problem. This
+        is the outermost loop of of meta-validation. Same as meta training but
+        doesn't update the meta optimizer.
+        '''
+        # num_datasets = Number of training iterations for the meta optimizer
+        num_datasets = self.training_info['num_datasets']
+        num_training_datasets = int(num_datasets * self.transfer_options['data_split_meta']['val'])
+        for ds_iter in range(num_training_datasets):
+            self.current_dataset = ds_iter  # Set ds iteration (for loss history)
+
+            # Reset gatenet (optimizee network)
+            self.graph.reset_graph(self.sess)
+
+            # Build new transfer dataset
+            self._dm.build_dataset(transfer_type='train')
+
+            # Run transfer training (middle) loop
+            self._transfer_test_loop()
 
     def meta_test(self):
-        raise NotImplementedError()
+        '''Test the meta optimizer for the transfer learning problem. This
+        is the outermost loop of of meta-testing. Same as meta training but
+        doesn't update the meta optimizer.
+        '''
+        # num_datasets = Number of training iterations for the meta optimizer
+        num_datasets = self.training_info['num_datasets']
+        num_training_datasets = int(num_datasets * self.transfer_options['data_split_meta']['val'])
+        for ds_iter in range(num_training_datasets):
+            self.current_dataset = ds_iter  # Set ds iteration (for loss history)
+
+            # Reset gatenet (optimizee network)
+            self.graph.reset_graph(self.sess)
+
+            # Build new transfer dataset
+            self._dm.build_dataset(transfer_type='train')
+
+            # Run transfer training (middle) loop
+            self._transfer_test_loop()
 
     ##### Middle Loop Training #################################################
     @staticmethod
@@ -489,7 +523,7 @@ class TransferLearnTrainer(Trainer):
         # Get the number of tasks to run.
         num_tasks = self.training_info['tasks_per_dataset']
 
-        for task_iter in range(1, num_tasks):
+        for task_iter in range(0, num_tasks):
             self.current_task = task_iter  # Set the current task (for loss history)
             self.task_steps = 0
             self._dm.build_task()
@@ -511,6 +545,43 @@ class TransferLearnTrainer(Trainer):
             prev_in, prev_label = self._dm.get_all_test_data()
             previous_test_inputs.append(prev_in)
             previous_test_labels.append(prev_label)
+
+    def _transfer_test_loop(self):
+        '''Do transfer between tasks. This is a training iteration of the
+        metaoptimizer.
+
+        What it does each loop:
+            - Get a new task (either single for simple prob or split )
+            - Train the Gatenet (optimizee) for a specific task
+        '''
+        # Get the number of tasks to run.
+        num_tasks = self.training_info['tasks_per_dataset']
+
+        for task_iter in range(0, num_tasks):
+            self.current_task = task_iter  # Set the current task (for loss history)
+            self.task_steps = 0
+            self._dm.build_task()
+
+            # A callable data getter for current and additional losses
+            train_dg = self._dm.get_test_batch
+            # Train the next task
+            self._train_optimizee_loop(data_getter=train_dg)
+
+            # Test the performance of transfer on the test set of the current task
+            # Callable data getters for current and previous test losses
+            ts_input, ts_label = self._dm.get_test_batch(self.batch_size)
+
+            vals, printable_vals = self._train_step(
+                self.sess,
+                feed_dict={self.input: ts_input, self.label: ts_label},
+                train_step=self.train_step,
+                loss=self.loss,
+                meta_loss=self.meta_loss_train,
+                merged=self.merged,
+                accuracy=self.accuracy,
+                y=self.pred)
+            self._print_progress(x=tr_input, y_=tr_label, **printable_vals)
+
 
     ##### Inner Loop Training ##################################################
     def _train_optimizee_loop(self, data_getter):
@@ -575,44 +646,46 @@ class TransferLearnTrainer(Trainer):
             - Train step of the meta optimizer
             - Print progess and test performance
         '''
-        ts_input, ts_label = data_getter(self.batch_size)
 
-        # Run this meta update step if you have an additional loss
-        if additional_data_getter is not None:
-            a_ts_input, a_ts_label = additional_data_getter(self.batch_size)
-            feed_dict = {
-                self.input: ts_input,
-                self.label: ts_label,
-                self.a_input: a_ts_input,
-                self.a_label: a_ts_label,
-            }
-            vals, printable_vals = self._train_step(
-                self.sess,
-                feed_dict=feed_dict,
-                train_step_meta=self.train_step_meta,
-                meta_loss=self.meta_loss_test,
-                a_loss=self.a_loss,
-                merged=self.merged,
-                accuracy=self.accuracy,
-                y=self.pred)
+        for i in range(20):
+            ts_input, ts_label = data_getter(self.batch_size)
 
-        # Run this meta update step if it's the first task in the dataset (no a_loss)
-        else:
-            feed_dict = {
-                self.input: ts_input,
-                self.label: ts_label,
-                self.a_input: ts_input,
-                self.a_label: ts_label,
-            }
-            vals, printable_vals = self._train_step(
-                self.sess,
-                feed_dict=feed_dict,
-                train_step_meta=self.train_step_meta_no_a_loss,
-                meta_loss=self.meta_loss_test_no_a_loss,
-                merged=self.merged,
-                accuracy=self.accuracy,
-                y=self.pred)
-        self._print_test(x=ts_input, y_=ts_label, **printable_vals)
+            # Run this meta update step if you have an additional loss
+            if additional_data_getter is not None:
+                a_ts_input, a_ts_label = additional_data_getter(self.batch_size)
+                feed_dict = {
+                    self.input: ts_input,
+                    self.label: ts_label,
+                    self.a_input: a_ts_input,
+                    self.a_label: a_ts_label,
+                }
+                vals, printable_vals = self._train_step(
+                    self.sess,
+                    feed_dict=feed_dict,
+                    train_step_meta=self.train_step_meta,
+                    meta_loss=self.meta_loss_test,
+                    a_loss=self.a_loss,
+                    merged=self.merged,
+                    accuracy=self.accuracy,
+                    y=self.pred)
+
+            # Run this meta update step if it's the first task in the dataset (no a_loss)
+            else:
+                feed_dict = {
+                    self.input: ts_input,
+                    self.label: ts_label,
+                    self.a_input: ts_input,
+                    self.a_label: ts_label,
+                }
+                vals, printable_vals = self._train_step(
+                    self.sess,
+                    feed_dict=feed_dict,
+                    train_step_meta=self.train_step_meta_no_a_loss,
+                    meta_loss=self.meta_loss_test_no_a_loss,
+                    merged=self.merged,
+                    accuracy=self.accuracy,
+                    y=self.pred)
+            self._print_test(x=ts_input, y_=ts_label, **printable_vals)
 
 
 def main():
@@ -624,6 +697,7 @@ def main():
     print_every = 250
     num_batches = 5000
     batch_size = 16
+    len_unroll = 1#20
 
     parameter_dict = {
             'C': output_shape,
@@ -634,31 +708,16 @@ def main():
             'L': 3,
             'module_type': 'Perceptron',
     }
-    len_unroll = 1
     MO_options = {
             'optimizer_type':'CoordinateWiseLSTM',
             'second_derivatives':False,
             'params_as_state':False,
             'rnn_layers':(4,4),
             'len_unroll':len_unroll,
-            'w_ts':[1 for _ in range(len_unroll)],
+             'w_ts':[1 for _ in range(len_unroll)],
             'lr':0.001,
-            'meta_lr':0.5,
-            'load_from_file':[
-                    './save/meta_opt_identity_initialization_1.l2l', # 0
-                    './save/meta_opt_identity_initialization_2.l2l', # 1
-                    './save/meta_opt_identity_initialization_3.l2l', # 2
-                    './save/meta_opt_identity_initialization_4.l2l', # 3
-                    './save/meta_opt_identity_initialization_5.l2l', # 4
-                    './save/meta_opt_identity_initialization_5.l2l', # 5
-                    './save/meta_opt_identity_initialization_6.l2l', # 6
-                    './save/meta_opt_identity_initialization_7.l2l', # 7
-                    './save/meta_opt_identity_initialization_8.l2l', # 8
-                    './save/meta_opt_identity_initialization_9.l2l', # 9
-                    './save/meta_opt_identity_initialization_10.l2l', # 10
-                    './save/meta_opt_identity_initialization_11.l2l', # 11
-                    './save/meta_opt_identity_initialization_12.l2l', # 12
-            ],
+            'meta_lr':5.,
+            'load_from_file':'./save/meta_opt_identity_initialization.l2l', # 0-12
             'save_summaries':{},
             'name':'MetaOptimizer'
     }

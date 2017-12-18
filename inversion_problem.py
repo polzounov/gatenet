@@ -7,11 +7,15 @@ import matplotlib.pyplot as plt
 from dataset_loading.create_datasets import LinearProblemGenerator
 
 
-def limit_len(a, limit=10):
-    return str(a)[0:limit]
+def limit_len(a, limit=7):
+    if a >= 0:
+        return ' '+str(a)[0:limit-1]
+    else:
+        return str(a)[0:limit]
 
 
 def smooth(history, average_len=10):
+    '''Average 'history' for nicer plots.'''
     history = history.reshape(-1, average_len, 2)
     history = np.mean(history, axis=1)
     history.reshape(-1, 2)
@@ -44,7 +48,6 @@ def train(parameter_dict, size, total_examples, print_every):
                                                decay_rate=0.92,
                                                staircase=True,
                                                name=None)
-
     # Build computation graph
     graph = Graph(parameter_dict)
     y = graph.return_logits(x)
@@ -65,7 +68,6 @@ def train(parameter_dict, size, total_examples, print_every):
 
     history = np.zeros((int(parameter_dict['num_batches']/print_every), 2))
 
-
     for i in range(parameter_dict['num_batches']):
         tr_data, tr_label = get_batch(parameter_dict['batch_size'])
 
@@ -77,7 +79,7 @@ def train(parameter_dict, size, total_examples, print_every):
             print('\nTraining {}, loss {}, lr {}'.format(i, mse_loss, lr))
             history[int(i/print_every-1),:] = [i, mse_loss]
             for j in range(min(tr_label.shape[1], 10)):
-                print('\tPred {}, Actual {}, Input {}'.format(limit_len(pred[0,j]), limit_len(tr_label[0,j]), limit_len(tr_data[0,j])))
+                print('\tInput {}, Pred {}, Actual {}'.format(limit_len(tr_data[0,j]), limit_len(pred[0,j]), limit_len(tr_label[0,j])))
 
         sess.run(train_step, feed_dict={x: tr_data, y_: tr_label})
 
